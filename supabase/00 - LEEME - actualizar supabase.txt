@@ -163,3 +163,12 @@ idea: mejor un error claro que un color que no existe.
 
 Fichero equivalente en SQL:
   supabase/13 - migration-user-preferences.sql
+
+Sobre la numeración de esta carpeta:
+  Los ficheros van con dos cifras (01, 02, ... 13) para que el
+  explorador los ordene de verdad. Sin el cero delante, "10" se
+  colaba justo detrás de "1" y "2" aparecía después de "13".
+  Al añadir una migración nueva, sigue la cuenta: 14, 15...
+
+  schema-completo.sql   esquema entero, para empezar de cero
+  migration-grants.sql  permisos, por si algo deja de verse
