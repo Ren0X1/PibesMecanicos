@@ -10,7 +10,7 @@ const COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#8b5cf6', '#ec4899'
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 0, padding: '8px 12px', fontSize: 12 }}>
       <div style={{ fontWeight: 700, marginBottom: 4, color: theme.white }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.color, display: 'flex', gap: 8 }}>
@@ -111,10 +111,10 @@ export default function ExpenseTab({ maintenance, fuelLogs, isMobile, currentKm 
         )}
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: theme.muted }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, background: '#3b82f6', display: 'inline-block' }} /> Mantenimiento
+            <span style={{ width: 10, height: 10, borderRadius: 0, background: '#3b82f6', display: 'inline-block' }} /> Mantenimiento
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: theme.muted }}>
-            <span style={{ width: 10, height: 10, borderRadius: 2, background: '#22c55e', display: 'inline-block' }} /> Combustible
+            <span style={{ width: 10, height: 10, borderRadius: 0, background: '#22c55e', display: 'inline-block' }} /> Combustible
           </span>
         </div>
       </div>
@@ -137,7 +137,7 @@ export default function ExpenseTab({ maintenance, fuelLogs, isMobile, currentKm 
             <div style={{ flex: 1, width: '100%' }}>
               {categoryData.map((c, i) => (
                 <div key={c.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 2, background: COLORS[i % COLORS.length], flexShrink: 0 }} />
+                  <span style={{ width: 10, height: 10, borderRadius: 0, background: COLORS[i % COLORS.length], flexShrink: 0 }} />
                   <span style={{ flex: 1, color: theme.text }}>{c.name}</span>
                   <span style={{ fontWeight: 700, color: theme.white }}>{c.value}€</span>
                   <span style={{ color: theme.muted, fontSize: 11, width: 40, textAlign: 'right' }}>

@@ -23,6 +23,12 @@ CREATE TABLE IF NOT EXISTS profiles (
   pin                  TEXT NOT NULL DEFAULT '1234',
   role                 TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user')),
   pin_change_required  BOOLEAN DEFAULT false,
+  -- Preferencias (ver migración 13). NULL = todavía no ha elegido,
+  -- que es lo que dispara el asistente de bienvenida.
+  lang                 TEXT CHECK (lang   IS NULL OR lang  IN ('es','en','zh','de','fr','ru')),
+  theme                TEXT CHECK (theme  IS NULL OR theme IN ('dark','light')),
+  accent               TEXT CHECK (accent IS NULL OR accent IN ('mandarina','turquesa','manzana','oro','coral','frambuesa','purpura','marfil')),
+  onboarded_at         TIMESTAMPTZ,
   created_at           TIMESTAMPTZ DEFAULT now()
 );
 
@@ -30,6 +36,10 @@ CREATE TABLE IF NOT EXISTS profiles (
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email TEXT;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS pin_change_required BOOLEAN DEFAULT false;
 ALTER TABLE profiles ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS lang         TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS theme        TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS accent       TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarded_at TIMESTAMPTZ;
 
 
 -- ═══════════════════════════════════════════════════════════

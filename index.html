@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#161616" />
+    <meta name="theme-color" content="#121213" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Pibes Mecánicos</title>
@@ -11,44 +11,69 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="apple-mobile-web-app-title" content="Pibes Mec." />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <script>
+      /* Aplica el tema ANTES del primer pintado: si no, al cargar en
+         oscuro se ve un fogonazo blanco. */
+      (function () {
+        try {
+          var m = localStorage.getItem('pm_theme') || 'dark';
+          var bg = m === 'light' ? '#f0f0ef' : '#121213';
+          document.documentElement.setAttribute('data-theme', m);
+          document.documentElement.style.background = bg;
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.content = bg;
+        } catch (e) {}
+      })();
+    </script>
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
       body {
-        font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
-        background: #161616;
-        color: #e2e8f0;
+        font-family: Archivo, system-ui, -apple-system, 'Segoe UI', sans-serif;
+        background: #121213;
+        color: #d2d2d5;
         -webkit-font-smoothing: antialiased;
         -webkit-tap-highlight-color: transparent;
         overscroll-behavior: none;
       }
+      html[data-theme="light"] body { background: #f0f0ef; color: #292929; }
+
       #root { min-height: 100vh; min-height: 100dvh; }
-      input, select, button { font-family: inherit; }
-      /* Prevent iOS zoom on input focus */
+      input, select, button, textarea { font-family: inherit; }
+
+      /* Nada redondeado en toda la interfaz. La única excepción son
+         los indicadores circulares, que lo piden explícitamente. */
+      input, select, textarea, button { border-radius: 0; }
+
+      /* Evita el zoom de iOS al enfocar un campo */
       @media (max-width: 639px) {
         input, select, textarea { font-size: 16px !important; }
+        body { font-size: 14px; }
+        button { min-height: 38px; }
+        html { scroll-behavior: smooth; }
+        button[title]:not([style*="flex-direction"]) { min-width: 38px; }
       }
-      ::selection { background: rgba(245,158,11,0.3); }
-      ::-webkit-scrollbar { width: 6px; }
+
+      ::selection { background: rgba(255, 122, 31, 0.30); }
+      html[data-theme="light"] ::selection { background: rgba(168, 74, 12, 0.22); }
+
+      ::-webkit-scrollbar { width: 8px; height: 8px; }
       ::-webkit-scrollbar-track { background: transparent; }
-      ::-webkit-scrollbar-thumb { background: #303030; border-radius: 3px; }
+      ::-webkit-scrollbar-thumb { background: #2f2f31; border-radius: 0; }
+      html[data-theme="light"] ::-webkit-scrollbar-thumb { background: #cbcbc8; }
+
       .tabbar-scroll::-webkit-scrollbar { display: none; }
       .tabbar-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
-      /* Mobile UX improvements */
-      @media (max-width: 639px) {
-        body { font-size: 15px; }
-        button { min-height: 38px; }
-        /* Smooth scroll on mobile */
-        html { scroll-behavior: smooth; }
-        /* Bigger tap targets for icon-only buttons */
-        button[title]:not([style*="flex-direction"]) { min-width: 38px; }
-      }
-      /* Prevent text selection on UI controls */
       button { user-select: none; -webkit-user-select: none; }
-      /* Smooth transitions */
-      button { transition: background .15s, opacity .15s, transform .1s; }
-      button:active { transform: scale(0.97); }
+      button { transition: background .15s, opacity .15s, color .15s; }
+      button:active { opacity: .75; }
+
+      /* Cifras siempre de ancho fijo: las columnas no bailan */
+      .num { font-variant-numeric: tabular-nums; }
     </style>
   </head>
   <body>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { ShieldCheck, ShieldAlert, ShieldX, Plus, Edit2, Trash2, Save, Calendar } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { formatDate } from '../lib/constants.js'
-import { createItvRecord, updateItvRecord, deleteItvRecord } from '../lib/supabase.js'
+import { createItvRecord, updateItvRecord, deleteItvRecord } from '../lib/api.js'
 import { Modal, Field, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 
 const RESULTS = [
@@ -198,7 +198,7 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 12, flexDirection: isMobile ? 'column' : 'row' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ background: `${itvStatus.color}18`, borderRadius: 10, padding: 10, display: 'flex' }}>
+            <div style={{ background: `${itvStatus.color}18`, borderRadius: 0, padding: 10, display: 'flex' }}>
               <StatusIcon size={22} color={itvStatus.color} />
             </div>
             <div>

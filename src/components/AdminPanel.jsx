@@ -3,7 +3,7 @@ import { Plus, Trash2, Save, Users, Car, Key, BarChart3, ShieldCheck, Edit2, Che
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords, getPendingGroups, approveGroup, rejectGroup } from '../lib/supabase.js'
+import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords, getPendingGroups, approveGroup, rejectGroup } from '../lib/api.js'
 import { getMaintStatus, formatDate } from '../lib/constants.js'
 import { Modal, Field, Loader, Stat } from './ui.jsx'
 
@@ -12,7 +12,7 @@ const COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#8b5cf6']
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 0, padding: '8px 12px', fontSize: 12 }}>
       <div style={{ fontWeight: 700, marginBottom: 2, color: theme.text }}>{label}</div>
       {payload.map((p, i) => <div key={i} style={{ color: p.color }}>{p.name}: {p.value}</div>)}
     </div>
@@ -152,20 +152,20 @@ export default function AdminPanel({ onToast }) {
         <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26, marginBottom: 20 }}>Administración</h1>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: theme.bg, borderRadius: 10, padding: 4 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: theme.bg, borderRadius: 0, padding: 4 }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               display: 'flex', alignItems: 'center', gap: mob ? 4 : 5, flex: 1, justifyContent: 'center', minWidth: 0,
               background: tab === t.id ? theme.card : 'transparent', color: tab === t.id ? theme.text : theme.muted,
               border: tab === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-              borderRadius: 8, padding: mob ? '8px 4px' : '8px 12px', cursor: 'pointer', fontWeight: 600,
+              borderRadius: 0, padding: mob ? '8px 4px' : '8px 12px', cursor: 'pointer', fontWeight: 600,
               fontSize: mob ? 12 : 13, fontFamily: 'inherit', whiteSpace: 'nowrap',
             }}>
               {t.icon}
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
               {t.badge && (
                 <span style={{
-                  background: theme.red, color: '#fff', borderRadius: 10, minWidth: 17, height: 17,
+                  background: theme.red, color: '#fff', borderRadius: 0, minWidth: 17, height: 17,
                   padding: '0 5px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: 10, fontWeight: 800, flexShrink: 0,
                 }}>{t.badge}</span>
@@ -194,7 +194,7 @@ export default function AdminPanel({ onToast }) {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-                        <div style={{ background: isAdminUser ? theme.accentSoft : theme.bg, borderRadius: 10, padding: 9, display: 'flex', flexShrink: 0 }}>
+                        <div style={{ background: isAdminUser ? theme.accentSoft : theme.bg, borderRadius: 0, padding: 9, display: 'flex', flexShrink: 0 }}>
                           {isAdminUser ? <ShieldCheck size={18} color={theme.accent} /> : <Users size={18} color={theme.muted} />}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -332,7 +332,7 @@ export default function AdminPanel({ onToast }) {
                   <div key={g.id} style={{ ...css.card, padding: mob ? 14 : 18, marginBottom: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ background: theme.yellowSoft, borderRadius: 10, padding: 10, display: 'flex' }}>
+                        <div style={{ background: theme.yellowSoft, borderRadius: 0, padding: 10, display: 'flex' }}>
                           <Users size={20} color={theme.yellow} />
                         </div>
                         <div>
@@ -403,7 +403,7 @@ export default function AdminPanel({ onToast }) {
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 4 }}>
                     {stats.vehicleTypes.map((v, i) => (
                       <span key={v.name} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: theme.muted }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 2, background: COLORS[i], display: 'inline-block' }} />
+                        <span style={{ width: 10, height: 10, borderRadius: 0, background: COLORS[i], display: 'inline-block' }} />
                         {v.name}: {v.value}
                       </span>
                     ))}
@@ -433,7 +433,7 @@ export default function AdminPanel({ onToast }) {
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 4 }}>
                     {[{ l: 'OK', c: theme.green, v: stats.ok }, { l: 'Próx.', c: theme.yellow, v: stats.warn }, { l: 'Venc.', c: theme.red, v: stats.overdue }].map(x => (
                       <span key={x.l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: theme.muted }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 2, background: x.c, display: 'inline-block' }} />
+                        <span style={{ width: 10, height: 10, borderRadius: 0, background: x.c, display: 'inline-block' }} />
                         {x.l}: {x.v}
                       </span>
                     ))}

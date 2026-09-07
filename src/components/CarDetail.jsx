@@ -10,9 +10,10 @@ import {
   updateCar, getMaintenanceRecords, upsertMaintenanceRecord,
   deleteMaintenanceRecord, getKmLogs, createKmLog, deleteKmLog,
   getCarParts, createCarPart, deleteCarPart, getFuelLogs, getItvRecords, getVehicleTodos
-} from '../lib/supabase.js'
+} from '../lib/api.js'
 import { MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle } from '../lib/constants.js'
 import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
+import SwipeArea, { useEdgeBack } from './SwipeArea.jsx'
 import FuelTab from './FuelTab.jsx'
 import ExpenseTab from './ExpenseTab.jsx'
 import ItvCard from './ItvCard.jsx'
@@ -29,7 +30,7 @@ function TabBar({ tabs, active, onChange, isMobile }) {
   const cols = tabs.length <= 4 ? tabs.length : 3
   return (
     <div style={{
-      marginBottom: 16, background: theme.bg, borderRadius: 10, padding: 4,
+      marginBottom: 16, background: theme.bg, borderRadius: 0, padding: 4,
       ...(isMobile
         ? { display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 4 }
         : { display: 'flex', gap: 4 }),
@@ -41,7 +42,7 @@ function TabBar({ tabs, active, onChange, isMobile }) {
           background: active === t.id ? theme.card : 'transparent',
           color: active === t.id ? theme.white : theme.muted,
           border: active === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-          borderRadius: 8, padding: isMobile ? '9px 6px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
+          borderRadius: 0, padding: isMobile ? '9px 6px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
           fontSize: isMobile ? 12 : 13, fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
           whiteSpace: 'nowrap', minWidth: 0,
         }}>
@@ -49,7 +50,7 @@ function TabBar({ tabs, active, onChange, isMobile }) {
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
           {t.badge && (
             <span style={{
-              background: theme.accent, color: '#000', borderRadius: 10,
+              background: theme.accent, color: '#000', borderRadius: 0,
               minWidth: 17, height: 17, padding: '0 5px',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 10, fontWeight: 800, flexShrink: 0,
@@ -305,6 +306,11 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
   useEffect(() => { loadData() }, [car.id])
 
+  /* Deslizar desde el borde izquierdo vuelve al listado, como en iOS.
+     Va aquí arriba a propósito: los hooks tienen que ejecutarse
+     siempre, y más abajo hay un return temprano por la carga. */
+  useEdgeBack(onBack)
+
   const stats = useMemo(() => {
     let ok = 0, warn = 0, overdue = 0
     maintenance.forEach(m => { const s = getMaintStatus(m, car.current_km); if (s === 'ok') ok++; else if (s === 'warn') warn++; else overdue++ })
@@ -368,6 +374,8 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
     { id: 'km', icon: <TrendingUp size={14} />, label: mob ? 'Km' : 'Kilómetros' },
   ]
 
+  const tabIndex = Math.max(0, detailTabs.findIndex(t => t.id === activeTab))
+
   return (
     <div style={{ paddingTop: mob ? 16 : 24, paddingBottom: 40 }}>
       <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 16, padding: mob ? '6px 12px' : '8px 16px' }}><ChevronLeft size={16} /> Volver</button>
@@ -402,7 +410,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
                   <div style={{
                     position: 'absolute', top: '100%', right: 0, marginTop: 6,
                     background: theme.card, border: `1px solid ${theme.border}`,
-                    borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                    borderRadius: 0, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
                     zIndex: 51, minWidth: 180, overflow: 'hidden',
                   }}>
                     <button onClick={() => {
@@ -463,112 +471,117 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
       {/* Tabs */}
       <TabBar tabs={detailTabs} active={activeTab} onChange={setActiveTab} isMobile={mob} />
 
-      {/* Maintenance Tab */}
-      {activeTab === 'maint' && (
-        mob ? (
-          /* Mobile: card list */
-          <div>
-            {getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
-              const m = maintenance.find(x => x.type_id === mt.id)
-              return <MaintCard key={mt.id} mt={mt} record={m} currentKm={car.current_km}
-                onEdit={() => setEditMaintType(mt.id)} onDelete={() => handleDeleteMaint(mt.id)} />
-            })}
-          </div>
-        ) : (
-          /* Desktop: table */
-          <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-              <h3 style={css.h3}><Wrench size={16} style={{ marginRight: 6 }} />Mantenimientos</h3>
+      {/* El contenido de las pestañas se desliza en táctil */}
+      <SwipeArea index={tabIndex} count={detailTabs.length}
+        onChange={i => setActiveTab(detailTabs[i].id)}>
+        {/* Maintenance Tab */}
+        {activeTab === 'maint' && (
+          mob ? (
+            /* Mobile: card list */
+            <div>
+              {getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
+                const m = maintenance.find(x => x.type_id === mt.id)
+                return <MaintCard key={mt.id} mt={mt} record={m} currentKm={car.current_km}
+                  onEdit={() => setEditMaintType(mt.id)} onDelete={() => handleDeleteMaint(mt.id)} />
+              })}
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                    {['Elemento', 'Estado', 'Último (km)', 'Fecha últ.', 'Próximo (km)', 'Fecha próx.', 'Coste', ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
-                    const m = maintenance.find(x => x.type_id === mt.id)
-                    const status = m ? getMaintStatus(m, car.current_km) : null
-                    return (
-                      <tr key={mt.id} style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
-                        onClick={() => setEditMaintType(mt.id)}
-                        onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        <td style={{ ...css.td, fontWeight: 600 }}>{mt.emoji} {mt.name}</td>
-                        <td style={css.td}>{status ? <StatusBadge status={status} /> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>Sin datos</span>}</td>
-                        <td style={{ ...css.td, color: theme.muted }}>{m ? m.last_km.toLocaleString() : '—'}</td>
-                        <td style={{ ...css.td, color: theme.muted }}>{formatDate(m?.last_date)}</td>
-                        <td style={{ ...css.td, fontWeight: 600 }}>{m ? m.next_km.toLocaleString() : '—'}</td>
-                        <td style={{ ...css.td, color: theme.muted }}>{formatDate(m?.next_date)}</td>
-                        <td style={{ ...css.td, color: theme.muted }}>{m?.cost ? `${m.cost}€` : '—'}</td>
+          ) : (
+            /* Desktop: table */
+            <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
+                <h3 style={css.h3}><Wrench size={16} style={{ marginRight: 6 }} />Mantenimientos</h3>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                      {['Elemento', 'Estado', 'Último (km)', 'Fecha últ.', 'Próximo (km)', 'Fecha próx.', 'Coste', ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
+                      const m = maintenance.find(x => x.type_id === mt.id)
+                      const status = m ? getMaintStatus(m, car.current_km) : null
+                      return (
+                        <tr key={mt.id} style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
+                          onClick={() => setEditMaintType(mt.id)}
+                          onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                          <td style={{ ...css.td, fontWeight: 600 }}>{mt.emoji} {mt.name}</td>
+                          <td style={css.td}>{status ? <StatusBadge status={status} /> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>Sin datos</span>}</td>
+                          <td style={{ ...css.td, color: theme.muted }}>{m ? m.last_km.toLocaleString() : '—'}</td>
+                          <td style={{ ...css.td, color: theme.muted }}>{formatDate(m?.last_date)}</td>
+                          <td style={{ ...css.td, fontWeight: 600 }}>{m ? m.next_km.toLocaleString() : '—'}</td>
+                          <td style={{ ...css.td, color: theme.muted }}>{formatDate(m?.next_date)}</td>
+                          <td style={{ ...css.td, color: theme.muted }}>{m?.cost ? `${m.cost}€` : '—'}</td>
+                          <td style={css.td}>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button onClick={e => { e.stopPropagation(); setEditMaintType(mt.id) }} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
+                              {m && <button onClick={e => { e.stopPropagation(); handleDeleteMaint(mt.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        )}
+
+        {/* Parts Tab */}
+        {activeTab === 'todos' && <TodoTab carId={car.id} todos={todos} onReload={loadData} onToast={onToast} isMobile={mob} />}
+
+        {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} onAdd={handleAddPart} onDelete={handleDeletePart} isMobile={mob} />}
+
+        {/* Fuel Tab */}
+        {activeTab === 'fuel' && <FuelTab carId={car.id} carKm={car.current_km} fuelLogs={fuelLogs} onReload={loadData} onToast={onToast} isMobile={mob}
+          onKmUpdate={async (km) => {
+            const updated = await updateCar(car.id, { current_km: km })
+            setCar(updated)
+          }}
+        />}
+
+        {/* Expenses Tab */}
+        {activeTab === 'expenses' && <ExpenseTab maintenance={maintenance} fuelLogs={fuelLogs} isMobile={mob} currentKm={car.current_km} />}
+
+        {/* KM History Tab */}
+        {activeTab === 'km' && (
+          <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
+            <div style={{ ...css.flexBetween, padding: mob ? '12px 14px' : '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
+              <h3 style={css.h3}><TrendingUp size={16} style={{ marginRight: 6 }} />Kilómetros</h3>
+              <button onClick={() => setShowKmModal(true)} style={css.btnSm(theme.accent, '#000')}><Plus size={12} /> Registrar</button>
+            </div>
+            {kmLogs.length === 0 ? (
+              <p style={{ padding: 20, color: theme.muted, textAlign: 'center' }}>Sin registros aún</p>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
+                      {['Fecha', 'Kilómetros', 'Notas', ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kmLogs.map(l => (
+                      <tr key={l.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
+                        <td style={{ ...css.td, fontSize: mob ? 12 : 13 }}>{formatDate(l.date)}</td>
+                        <td style={{ ...css.td, fontWeight: 700 }}>{l.km.toLocaleString()} km</td>
+                        <td style={{ ...css.td, color: theme.muted, fontSize: mob ? 12 : 13 }}>{l.notes || '—'}</td>
                         <td style={css.td}>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button onClick={e => { e.stopPropagation(); setEditMaintType(mt.id) }} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
-                            {m && <button onClick={e => { e.stopPropagation(); handleDeleteMaint(mt.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>}
-                          </div>
+                          <button onClick={() => handleDeleteKm(l.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
                         </td>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )
-      )}
+        )}
 
-      {/* Parts Tab */}
-      {activeTab === 'todos' && <TodoTab carId={car.id} todos={todos} onReload={loadData} onToast={onToast} isMobile={mob} />}
-
-      {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} onAdd={handleAddPart} onDelete={handleDeletePart} isMobile={mob} />}
-
-      {/* Fuel Tab */}
-      {activeTab === 'fuel' && <FuelTab carId={car.id} carKm={car.current_km} fuelLogs={fuelLogs} onReload={loadData} onToast={onToast} isMobile={mob}
-        onKmUpdate={async (km) => {
-          const updated = await updateCar(car.id, { current_km: km })
-          setCar(updated)
-        }}
-      />}
-
-      {/* Expenses Tab */}
-      {activeTab === 'expenses' && <ExpenseTab maintenance={maintenance} fuelLogs={fuelLogs} isMobile={mob} currentKm={car.current_km} />}
-
-      {/* KM History Tab */}
-      {activeTab === 'km' && (
-        <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
-          <div style={{ ...css.flexBetween, padding: mob ? '12px 14px' : '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-            <h3 style={css.h3}><TrendingUp size={16} style={{ marginRight: 6 }} />Kilómetros</h3>
-            <button onClick={() => setShowKmModal(true)} style={css.btnSm(theme.accent, '#000')}><Plus size={12} /> Registrar</button>
-          </div>
-          {kmLogs.length === 0 ? (
-            <p style={{ padding: 20, color: theme.muted, textAlign: 'center' }}>Sin registros aún</p>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                    {['Fecha', 'Kilómetros', 'Notas', ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
-                  </tr>
-                </thead>
-                <tbody>
-                  {kmLogs.map(l => (
-                    <tr key={l.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
-                      <td style={{ ...css.td, fontSize: mob ? 12 : 13 }}>{formatDate(l.date)}</td>
-                      <td style={{ ...css.td, fontWeight: 700 }}>{l.km.toLocaleString()} km</td>
-                      <td style={{ ...css.td, color: theme.muted, fontSize: mob ? 12 : 13 }}>{l.notes || '—'}</td>
-                      <td style={css.td}>
-                        <button onClick={() => handleDeleteKm(l.id)} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+      </SwipeArea>
 
       {/* Modals */}
       <KmLogModal open={showKmModal} onClose={() => setShowKmModal(false)} onSave={handleSaveKm} carKm={car.current_km} />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { CheckSquare, Square, Plus, Trash2, Save, Edit2, ChevronDown, ChevronRight, Flag } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
-import { createVehicleTodo, updateVehicleTodo, deleteVehicleTodo } from '../lib/supabase.js'
+import { createVehicleTodo, updateVehicleTodo, deleteVehicleTodo } from '../lib/api.js'
 import { Modal, Field } from './ui.jsx'
 
 const PRIORITIES = [

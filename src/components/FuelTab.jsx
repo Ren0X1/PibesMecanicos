@@ -2,7 +2,7 @@ import { formatDate } from '../lib/constants.js'
 import { useState, useMemo } from 'react'
 import { Fuel, Plus, Trash2, Save, TrendingDown, Gauge, Route } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
-import { createFuelLog, deleteFuelLog } from '../lib/supabase.js'
+import { createFuelLog, deleteFuelLog } from '../lib/api.js'
 import { Modal, Field, Stat, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 
 const today = new Date().toISOString().split('T')[0]

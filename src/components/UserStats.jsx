@@ -3,7 +3,7 @@ import { Car, Euro, Fuel, Wrench, Gauge, TrendingUp, AlertTriangle, ShieldCheck 
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getCars, getMaintenanceRecords, getFuelLogs, getItvRecords } from '../lib/supabase.js'
+import { getCars, getMaintenanceRecords, getFuelLogs, getItvRecords } from '../lib/api.js'
 import { getMaintStatus, MAINT_TYPES } from '../lib/constants.js'
 import { Stat, Loader } from './ui.jsx'
 
@@ -12,7 +12,7 @@ const PIE_COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#8b5cf6', '#ec4
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 12 }}>
+    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 0, padding: '8px 12px', fontSize: 12 }}>
       <div style={{ fontWeight: 700, marginBottom: 4, color: theme.text }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.color, display: 'flex', gap: 8 }}>
@@ -279,10 +279,10 @@ export default function UserStats({ user, onToast }) {
                 </div>
                 <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: theme.muted }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 2, background: '#3b82f6', display: 'inline-block' }} /> Mantenimiento
+                    <span style={{ width: 10, height: 10, borderRadius: 0, background: '#3b82f6', display: 'inline-block' }} /> Mantenimiento
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: theme.muted }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 2, background: '#22c55e', display: 'inline-block' }} /> Combustible
+                    <span style={{ width: 10, height: 10, borderRadius: 0, background: '#22c55e', display: 'inline-block' }} /> Combustible
                   </span>
                 </div>
               </div>
@@ -306,7 +306,7 @@ export default function UserStats({ user, onToast }) {
                   <div style={{ flex: 1, width: '100%' }}>
                     {stats.spendPie.map((v, i) => (
                       <div key={v.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 2, background: PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }} />
+                        <span style={{ width: 10, height: 10, borderRadius: 0, background: PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }} />
                         <span style={{ flex: 1, color: theme.text }}>{v.name}</span>
                         <span style={{ fontWeight: 700, color: theme.text }}>{v.value}€</span>
                         <span style={{ color: theme.muted, fontSize: 11, width: 40, textAlign: 'right' }}>

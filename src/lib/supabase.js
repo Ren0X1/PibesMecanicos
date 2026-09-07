@@ -3,20 +3,21 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Validate env vars — prevents the cryptic "supabaseUrl is required" crash
-if (!supabaseUrl || !supabaseKey) {
-  const msg = '⚠️ Faltan las variables de entorno de Supabase.\n\n'
-    + 'Si estás en local: crea un fichero .env con:\n'
-    + '  VITE_SUPABASE_URL=https://tu-proyecto.supabase.co\n'
-    + '  VITE_SUPABASE_ANON_KEY=tu-anon-key\n\n'
-    + 'Si estás en GitHub Pages: añade los secrets en\n'
-    + '  Settings > Secrets and variables > Actions\n'
-    + '  y vuelve a lanzar el deploy.'
-  document.body.innerHTML = `<pre style="color:#f59e0b;background:#0b0b12;padding:40px;font-size:14px;white-space:pre-wrap">${msg}</pre>`
-  throw new Error('Missing Supabase env vars')
+export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseKey)
+
+/* Sin claves NO se revienta al importar: la demo (/demo) no toca
+   Supabase y tiene que poder arrancar en un clon recién bajado.
+   El error solo salta si alguien intenta usar la base de verdad. */
+function missingConfig() {
+  throw new Error(
+    'Faltan las variables de entorno de Supabase. Crea un .env con ' +
+    'VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY, o entra en /demo.'
+  )
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = hasSupabaseConfig
+  ? createClient(supabaseUrl, supabaseKey)
+  : new Proxy({}, { get: () => missingConfig })
 
 // ─── Profiles ───
 

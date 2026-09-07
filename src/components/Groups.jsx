@@ -11,7 +11,7 @@ import {
   removeGroupMember, getGroupMessages, sendGroupMessage, getProfiles, getMemberCars,
   getMaintenanceRecords, getCarParts, getItvRecords, getFuelLogs,
   inviteToGroup, getMyInvitations, getGroupInvitations, acceptInvitation, rejectInvitation
-} from '../lib/supabase.js'
+} from '../lib/api.js'
 import { getMaintStatus, MAINT_TYPES } from '../lib/constants.js'
 import { Modal, Field, Loader, StatusBadge } from './ui.jsx'
 
@@ -193,7 +193,7 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
         border: `1px solid ${theme.accent}33`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{ background: theme.accent, borderRadius: 14, padding: 12, display: 'flex' }}>
+          <div style={{ background: theme.accent, borderRadius: 0, padding: 12, display: 'flex' }}>
             <Users size={24} color="#000" />
           </div>
           <div style={{ flex: 1 }}>
@@ -207,13 +207,13 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: theme.bg, borderRadius: 10, padding: 4 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: theme.bg, borderRadius: 0, padding: 4 }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center',
             background: tab === t.id ? theme.card : 'transparent', color: tab === t.id ? theme.white : theme.muted,
             border: tab === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-            borderRadius: 8, padding: isMobile ? '10px 12px' : '9px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
+            borderRadius: 0, padding: isMobile ? '10px 12px' : '9px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 13, fontFamily: 'inherit',
           }}>{t.icon} {t.label}</button>
         ))}
       </div>
@@ -228,7 +228,7 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
               return (
                 <div key={m.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start', marginBottom: 8 }}>
                   <div style={{
-                    maxWidth: '75%', padding: '8px 12px', borderRadius: 14,
+                    maxWidth: '75%', padding: '8px 12px', borderRadius: 0,
                     background: isMe ? theme.accent : theme.bg,
                     color: isMe ? '#000' : theme.text,
                     borderBottomRightRadius: isMe ? 4 : 14, borderBottomLeftRadius: isMe ? 14 : 4,
@@ -320,7 +320,7 @@ function GroupDetail({ group, user, onBack, onToast, isMobile }) {
               return (
                 <div key={m.id} style={{ ...css.card, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ background: isGroupOwner ? theme.accentSoft : theme.bg, borderRadius: 8, padding: 8, display: 'flex' }}>
+                    <div style={{ background: isGroupOwner ? theme.accentSoft : theme.bg, borderRadius: 0, padding: 8, display: 'flex' }}>
                       {isGroupOwner ? <Crown size={16} color={theme.accent} /> : <Users size={16} color={theme.muted} />}
                     </div>
                     <div>
@@ -489,7 +489,7 @@ export default function Groups({ user, onToast }) {
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ background: theme.accent, borderRadius: 12, padding: 10, display: 'flex' }}>
+                      <div style={{ background: theme.accent, borderRadius: 0, padding: 10, display: 'flex' }}>
                         <Sparkles size={20} color="#000" />
                       </div>
                       <div>
@@ -517,7 +517,7 @@ export default function Groups({ user, onToast }) {
         {/* My groups */}
         {groups.length === 0 ? (
           <div style={{ ...css.card, padding: 48, textAlign: 'center' }}>
-            <div style={{ background: theme.accentSoft, borderRadius: 16, padding: 16, display: 'inline-flex', marginBottom: 14 }}>
+            <div style={{ background: theme.accentSoft, borderRadius: 0, padding: 16, display: 'inline-flex', marginBottom: 14 }}>
               <Users size={36} color={theme.accent} />
             </div>
             <h3 style={{ ...css.h3, marginBottom: 6 }}>Aún no estás en ningún grupo</h3>
@@ -541,7 +541,7 @@ export default function Groups({ user, onToast }) {
                   onMouseEnter={e => { e.currentTarget.style.borderColor = theme.accent; e.currentTarget.style.transform = 'translateY(-2px)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.transform = 'translateY(0)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                    <div style={{ background: theme.accentSoft, borderRadius: 12, padding: 11, display: 'flex' }}>
+                    <div style={{ background: theme.accentSoft, borderRadius: 0, padding: 11, display: 'flex' }}>
                       <Users size={22} color={theme.accent} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>

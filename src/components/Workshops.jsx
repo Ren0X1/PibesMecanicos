@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Wrench, Plus, Trash2, Save, Edit2, Star, Phone, MapPin, MessageCircle } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getWorkshops, createWorkshop, deleteWorkshop, updateWorkshop } from '../lib/supabase.js'
+import { getWorkshops, createWorkshop, deleteWorkshop, updateWorkshop } from '../lib/api.js'
 import { Modal, Field, Loader } from './ui.jsx'
 
 function StarRating({ value, onChange }) {

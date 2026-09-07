@@ -1,0 +1,165 @@
+═══════════════════════════════════════════════════════════════
+ PIBES MECÁNICOS · ACTUALIZAR LA BASE DE DATOS
+ Migración 13 — preferencias de usuario (idioma, tema y color)
+═══════════════════════════════════════════════════════════════
+
+QUÉ HACE
+────────
+Añade cuatro columnas a la tabla "profiles":
+
+  lang          idioma elegido    (es, en, zh, de, fr, ru)
+  theme         tema elegido      (dark, light)
+  accent        color de acento   (mandarina, turquesa, ...)
+  onboarded_at  cuándo contestó el asistente de bienvenida
+
+Las cuatro se quedan VACÍAS (NULL) en los usuarios que ya existen.
+Eso es a propósito: NULL significa "todavía no ha contestado", y es
+justo lo que hace que a esa persona le salga el asistente la
+próxima vez que entre. Si les pusiéramos un valor por defecto,
+entrarían como si ya hubieran elegido y no se les preguntaría nunca.
+
+No borra nada ni toca ningún dato existente.
+
+
+CÓMO SE LANZA
+─────────────
+ 1. Entra en https://supabase.com y abre tu proyecto.
+ 2. Menú de la izquierda → SQL Editor.
+ 3. Pulsa "New query".
+ 4. Copia y pega TODO el bloque de abajo (desde la línea que pone
+    -- INICIO hasta la que pone -- FIN).
+ 5. Pulsa "Run" (o Ctrl+Enter).
+ 6. Tiene que salir "Success. No rows returned". Ya está.
+
+Se puede ejecutar varias veces sin problema: si ya está aplicada,
+no hace nada.
+
+
+═══════════════════════════════════════════════════════════════
+-- INICIO — copiar desde aquí
+═══════════════════════════════════════════════════════════════
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS lang         TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS theme        TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS accent       TEXT;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarded_at TIMESTAMPTZ;
+
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_lang_check;
+ALTER TABLE profiles ADD  CONSTRAINT profiles_lang_check
+  CHECK (lang IS NULL OR lang IN ('es', 'en', 'zh', 'de', 'fr', 'ru'));
+
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_theme_check;
+ALTER TABLE profiles ADD  CONSTRAINT profiles_theme_check
+  CHECK (theme IS NULL OR theme IN ('dark', 'light'));
+
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_accent_check;
+ALTER TABLE profiles ADD  CONSTRAINT profiles_accent_check
+  CHECK (accent IS NULL OR accent IN (
+    'mandarina', 'turquesa', 'manzana', 'oro',
+    'coral', 'frambuesa', 'purpura', 'marfil'
+  ));
+
+CREATE INDEX IF NOT EXISTS idx_profiles_onboarded
+  ON profiles (onboarded_at)
+  WHERE onboarded_at IS NULL;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON profiles
+  TO anon, authenticated, service_role;
+
+═══════════════════════════════════════════════════════════════
+-- FIN — copiar hasta aquí
+═══════════════════════════════════════════════════════════════
+
+
+COMPROBAR QUE HA IDO BIEN
+─────────────────────────
+Lanza esto en otra consulta. Tienen que salir las cuatro columnas,
+todas con is_nullable = YES:
+
+SELECT column_name, data_type, is_nullable
+  FROM information_schema.columns
+ WHERE table_name = 'profiles'
+   AND column_name IN ('lang', 'theme', 'accent', 'onboarded_at')
+ ORDER BY column_name;
+
+
+Y para ver a quién le falta contestar:
+
+SELECT name, username, lang, theme, accent, onboarded_at
+  FROM profiles
+ ORDER BY onboarded_at NULLS FIRST;
+
+
+───────────────────────────────────────────────────────────────
+ EXTRAS — solo si los necesitas
+───────────────────────────────────────────────────────────────
+
+A) NO QUIERES PREGUNTARLES Y PREFIERES DEJARLOS YA CONFIGURADOS
+   Deja a todos los usuarios actuales en español, tema oscuro y
+   mandarina, sin que les salga el asistente:
+
+   UPDATE profiles
+      SET lang = 'es', theme = 'dark', accent = 'mandarina',
+          onboarded_at = now()
+    WHERE onboarded_at IS NULL;
+
+
+B) VOLVER A PREGUNTARLE A ALGUIEN
+   Le saldrá el asistente la próxima vez que entre:
+
+   UPDATE profiles
+      SET onboarded_at = NULL
+    WHERE username = 'elusuario';
+
+
+C) VOLVER A PREGUNTARLES A TODOS
+
+   UPDATE profiles SET onboarded_at = NULL;
+
+
+D) CAMBIARLE LAS PREFERENCIAS A ALGUIEN A MANO
+
+   UPDATE profiles
+      SET lang = 'en', theme = 'light', accent = 'turquesa'
+    WHERE username = 'elusuario';
+
+
+E) DESHACER LA MIGRACIÓN ENTERA
+   Ojo: esto BORRA las preferencias que ya haya guardado la gente.
+
+   ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_lang_check;
+   ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_theme_check;
+   ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_accent_check;
+   DROP INDEX IF EXISTS idx_profiles_onboarded;
+   ALTER TABLE profiles DROP COLUMN IF EXISTS lang;
+   ALTER TABLE profiles DROP COLUMN IF EXISTS theme;
+   ALTER TABLE profiles DROP COLUMN IF EXISTS accent;
+   ALTER TABLE profiles DROP COLUMN IF EXISTS onboarded_at;
+
+
+───────────────────────────────────────────────────────────────
+ SI TODAVÍA NO HAS LANZADO ESTO
+───────────────────────────────────────────────────────────────
+La aplicación NO se rompe. El asistente sale igual y la elección
+se aplica al momento, pero al no existir las columnas no se puede
+guardar en el servidor: queda anotada solo en ese navegador y sale
+un aviso diciéndolo. En cuanto lances la migración, todo empieza a
+guardarse de verdad y a seguir al usuario entre dispositivos.
+
+
+VALORES ADMITIDOS
+─────────────────
+ lang    es (español) · en (inglés) · zh (chino)
+         de (alemán)  · fr (francés) · ru (ruso)
+
+ theme   dark · light
+
+ accent  mandarina · turquesa · manzana · oro
+         coral · frambuesa · purpura · marfil
+
+Cualquier otro valor lo rechaza la restricción CHECK, que es la
+idea: mejor un error claro que un color que no existe.
+
+
+Fichero equivalente en SQL:
+  supabase/13 - migration-user-preferences.sql

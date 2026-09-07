@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Bell, Plus, Trash2, Save, Edit2, CheckSquare, Square, ChevronDown, ChevronRight, Calendar, Car } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getReminders, createReminder, updateReminder, deleteReminder, getCars } from '../lib/supabase.js'
+import { getReminders, createReminder, updateReminder, deleteReminder, getCars } from '../lib/api.js'
 import { formatDate } from '../lib/constants.js'
 import { Modal, Field, Loader, DateInput } from './ui.jsx'
 
