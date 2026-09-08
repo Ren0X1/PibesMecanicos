@@ -1,29 +1,22 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Car, Euro, Fuel, Wrench, Gauge, TrendingUp, AlertTriangle, ShieldCheck } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import AreaChart from './AreaChart.jsx'
+import TwoColumn, { useTwoCol, Panel, Figure, Row, AttentionList } from './TwoColumn.jsx'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, getMaintenanceRecords, getFuelLogs, getItvRecords } from '../lib/api.js'
 import { getMaintStatus, MAINT_TYPES } from '../lib/constants.js'
 import { Stat, Loader } from './ui.jsx'
+import { t, useLang, fmtNum, fmtMoney, fmtMonth } from '../lib/i18n.js'
 
-const PIE_COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']
 
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null
-  return (
-    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 0, padding: '8px 12px', fontSize: 12 }}>
-      <div style={{ fontWeight: 700, marginBottom: 4, color: theme.text }}>{label}</div>
-      {payload.map((p, i) => (
-        <div key={i} style={{ color: p.color, display: 'flex', gap: 8 }}>
-          <span>{p.name}:</span><span style={{ fontWeight: 600 }}>{typeof p.value === 'number' ? p.value.toFixed(0) + (p.dataKey === 'km' ? ' km' : '€') : p.value}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
+/* Mantenimiento y combustible son las dos series de todas las
+   gráficas. Se les da color fijo dentro del tema para que
+   signifiquen lo mismo en toda la aplicación. */
+const SERIES = { maint: () => theme.accent, fuel: () => theme.green }
 
 export default function UserStats({ user, onToast }) {
+  useLang()
   const mob = useIsMobile()
   const [loading, setLoading] = useState(true)
   const [cars, setCars] = useState([])
@@ -43,7 +36,7 @@ export default function UserStats({ user, onToast }) {
         data[car.id] = { maint, fuel, itv }
       }
       setCarData(data)
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
     finally { setLoading(false) }
   }
 
@@ -104,7 +97,7 @@ export default function UserStats({ user, onToast }) {
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      months[key] = { name: d.toLocaleDateString('es-ES', { month: 'short' }).replace('.', ''), maint: 0, fuel: 0 }
+      months[key] = { name: fmtMonth(d).replace('.', ''), maint: 0, fuel: 0 }
     }
 
     cars.forEach(car => {
@@ -136,33 +129,55 @@ export default function UserStats({ user, onToast }) {
     }
   }, [cars, carData])
 
-  if (loading) return <Loader text="Cargando estadísticas..." />
+  /* A partir del iPad mini de lado, lo que hay que mirar hoy se va
+     a una columna fija: qué requiere atención y el coste por km. */
+  const { two } = useTwoCol()
+
+  if (loading) return <Loader text={t('common.loading')} />
+
+  /* Un vehículo entra en la columna si tiene algo vencido, algo
+     próximo o la ITV en cualquier estado que no sea «vale». */
+  const attention = (stats?.perVehicle || [])
+    .filter(v => v.overdue > 0 || v.warn > 0 || ['failed', 'expired', 'soon'].includes(v.itvStatus))
+    .map(v => {
+      const partes = []
+      if (v.overdue > 0) partes.push(`${v.overdue} ${t('stats.overdue')}`)
+      if (v.warn > 0) partes.push(`${v.warn} ${t('stats.upcoming')}`)
+      if (['failed', 'expired'].includes(v.itvStatus)) partes.push(t('stats.itvIssues'))
+      else if (v.itvStatus === 'soon') partes.push(t('itv.soon'))
+      return {
+        key: v.id,
+        title: v.name,
+        sub: partes.join(' · '),
+        color: v.overdue > 0 || ['failed', 'expired'].includes(v.itvStatus) ? theme.red : theme.yellow,
+      }
+    })
 
   return (
     <div style={css.container}>
       <div style={{ paddingTop: mob ? 20 : 28, paddingBottom: 40 }}>
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26 }}>Resumen</h1>
-          <p style={css.subtitle}>Estadísticas globales de tus {cars.length} vehículo{cars.length !== 1 ? 's' : ''}</p>
+          <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26 }}>{t('stats.title')}</h1>
+          <p style={css.subtitle}>{t('stats.sub', { n: cars.length })}</p>
         </div>
 
         {!stats || cars.length === 0 ? (
           <div style={{ ...css.card, padding: 40, textAlign: 'center' }}>
             <Car size={40} color={theme.mutedLight} style={{ marginBottom: 12 }} />
-            <p style={{ color: theme.muted, fontSize: 13 }}>No tienes vehículos registrados aún</p>
+            <p style={css.lbl}>{t('stats.empty')}</p>
           </div>
         ) : (
           <>
             {/* Summary stats */}
             <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr 1fr' : 'repeat(4, 1fr)', gap: mob ? 8 : 12, marginBottom: 16 }}>
-              <Stat icon={<Euro size={18} color={theme.accent} />} label="Gasto total" value={`${stats.grandTotal.toFixed(0)}€`} />
-              <Stat icon={<Wrench size={18} color="#3b82f6" />} label="Mantenimiento" value={`${stats.totalMaint.toFixed(0)}€`} color="#3b82f6" />
-              <Stat icon={<Fuel size={18} color={theme.green} />} label="Combustible" value={`${stats.totalFuel.toFixed(0)}€`} color={theme.green} />
-              <Stat icon={<Gauge size={18} color="#8b5cf6" />} label="Km totales" value={stats.totalKm.toLocaleString()} color="#8b5cf6" />
+              <Stat icon={<Euro size={15} />} label={t('stats.totalSpend')} value={fmtMoney(stats.grandTotal)} />
+              <Stat icon={<Wrench size={15} />} label={t('common.maintenance')} value={fmtMoney(stats.totalMaint)} color={theme.accent} />
+              <Stat icon={<Fuel size={15} />} label={t('common.fuel')} value={fmtMoney(stats.totalFuel)} color={theme.green} />
+              <Stat icon={<Gauge size={15} />} label={t('stats.totalKm')} value={fmtNum(stats.totalKm)} />
             </div>
 
-            {/* Alerts row */}
-            {(stats.overdueMaint > 0 || stats.warnMaint > 0 || stats.itvIssues > 0) && (
+            {/* Los avisos, en ancho, se van a la columna de la derecha */}
+            {!two && (stats.overdueMaint > 0 || stats.warnMaint > 0 || stats.itvIssues > 0) && (
               <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : 'repeat(3, 1fr)', gap: mob ? 8 : 12, marginBottom: 20 }}>
                 {stats.overdueMaint > 0 && (
                   <div style={{ ...css.card, padding: 14, background: `${theme.red}08`, border: `1px solid ${theme.red}30`, marginBottom: 0 }}>
@@ -170,7 +185,7 @@ export default function UserStats({ user, onToast }) {
                       <AlertTriangle size={20} color={theme.red} />
                       <div>
                         <div style={{ fontSize: 18, fontWeight: 800, color: theme.red }}>{stats.overdueMaint}</div>
-                        <div style={{ fontSize: 11, color: theme.muted }}>Mantenimientos vencidos</div>
+                        <div style={css.lbl}>{t('stats.overdue')}</div>
                       </div>
                     </div>
                   </div>
@@ -181,7 +196,7 @@ export default function UserStats({ user, onToast }) {
                       <AlertTriangle size={20} color={theme.yellow} />
                       <div>
                         <div style={{ fontSize: 18, fontWeight: 800, color: theme.yellow }}>{stats.warnMaint}</div>
-                        <div style={{ fontSize: 11, color: theme.muted }}>Mantenimientos próximos</div>
+                        <div style={css.lbl}>{t('stats.upcoming')}</div>
                       </div>
                     </div>
                   </div>
@@ -192,7 +207,7 @@ export default function UserStats({ user, onToast }) {
                       <ShieldCheck size={20} color={theme.red} />
                       <div>
                         <div style={{ fontSize: 18, fontWeight: 800, color: theme.red }}>{stats.itvIssues}</div>
-                        <div style={{ fontSize: 11, color: theme.muted }}>ITV con problemas</div>
+                        <div style={css.lbl}>{t('stats.itvIssues')}</div>
                       </div>
                     </div>
                   </div>
@@ -200,10 +215,39 @@ export default function UserStats({ user, onToast }) {
               </div>
             )}
 
+            {/* Contenido a la izquierda; a la derecha, lo que hay
+                que mirar hoy. En estrecho la columna no se repite:
+                los avisos ya salen arriba y el coste por km está en
+                la tabla. */}
+            <TwoColumn narrow="hide" context={two ? (
+              <>
+                <Panel title={t('stats.attention')} right={attention.length || null}>
+                  <AttentionList items={attention} empty={t('stats.allGood')} />
+                </Panel>
+
+                <Panel title={t('stats.costPerKm')}>
+                  <Figure
+                    label={t('stats.fleetCost')}
+                    value={stats.totalKm > 0 ? fmtMoney(stats.grandTotal / stats.totalKm, 2) : '—'}
+                    note={`${fmtMoney(stats.grandTotal)} · ${fmtNum(stats.totalKm)} ${t('common.km')}`}
+                  />
+                  <div style={{ marginTop: 12 }}>
+                    {stats.perVehicle.map(v => (
+                      <Row
+                        key={v.id}
+                        label={v.plate}
+                        value={v.km > 0 ? fmtMoney(v.total / v.km, 2) : '—'}
+                      />
+                    ))}
+                  </div>
+                </Panel>
+              </>
+            ) : null}>
+
             {/* Per-vehicle table */}
             <div style={{ ...css.card, padding: 0, overflow: 'hidden', marginBottom: 12 }}>
               <div style={{ padding: '14px 18px', borderBottom: `1px solid ${theme.border}` }}>
-                <h3 style={css.h3}>Gasto por vehículo</h3>
+                <h3 style={css.h3}>{t('stats.byVehicle')}</h3>
               </div>
               {mob ? (
                 <div>
@@ -211,13 +255,13 @@ export default function UserStats({ user, onToast }) {
                     <div key={v.id} style={{ padding: '12px 14px', borderBottom: `1px solid ${theme.border}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                         <span style={{ fontWeight: 700, fontSize: 14 }}>{v.name}</span>
-                        <span style={{ fontWeight: 700, color: theme.accent, fontSize: 14 }}>{v.total.toFixed(0)}€</span>
+                        <span style={{ ...css.num, fontWeight: 700, color: theme.accent, fontSize: 14 }}>{fmtMoney(v.total)}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: 12, fontSize: 12, color: theme.muted, flexWrap: 'wrap' }}>
+                      <div style={{ ...css.lbl, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                         <span>{v.plate}</span>
-                        <span>{v.km.toLocaleString()} km</span>
-                        <span style={{ color: '#3b82f6' }}>Mant. {v.maint.toFixed(0)}€</span>
-                        <span style={{ color: theme.green }}>Comb. {v.fuel.toFixed(0)}€</span>
+                        <span>{fmtNum(v.km)} {t('common.km')}</span>
+                        <span style={{ color: theme.accent }}>{t('common.maintenance')} {fmtMoney(v.maint)}</span>
+                        <span style={{ color: theme.green }}>{t('common.fuel')} {fmtMoney(v.fuel)}</span>
                       </div>
                     </div>
                   ))}
@@ -227,7 +271,7 @@ export default function UserStats({ user, onToast }) {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                        {['Vehículo', 'Matrícula', 'Km', 'Mantenimiento', 'Combustible', 'Total', 'Coste/km'].map((h, i) =>
+                        {[t('common.vehicle'), t('common.plate'), t('common.km'), t('common.maintenance'), t('common.fuel'), t('common.total'), t('stats.costPerKm')].map((h, i) =>
                           <th key={i} style={{ ...css.th, textAlign: i >= 2 ? 'right' : 'left' }}>{h}</th>
                         )}
                       </tr>
@@ -237,23 +281,23 @@ export default function UserStats({ user, onToast }) {
                         <tr key={v.id} style={{ borderBottom: `1px solid ${theme.border}` }}>
                           <td style={{ ...css.td, fontWeight: 600 }}>{v.name}</td>
                           <td style={{ ...css.td, color: theme.muted }}>{v.plate}</td>
-                          <td style={{ ...css.td, textAlign: 'right' }}>{v.km.toLocaleString()}</td>
-                          <td style={{ ...css.td, textAlign: 'right', color: '#3b82f6' }}>{v.maint.toFixed(0)}€</td>
-                          <td style={{ ...css.td, textAlign: 'right', color: theme.green }}>{v.fuel.toFixed(0)}€</td>
-                          <td style={{ ...css.td, textAlign: 'right', fontWeight: 700, color: theme.accent }}>{v.total.toFixed(0)}€</td>
-                          <td style={{ ...css.td, textAlign: 'right', color: theme.muted }}>
-                            {v.km > 0 ? `${(v.total / v.km).toFixed(2)}€` : '—'}
+                          <td style={{ ...css.td, ...css.num, textAlign: 'right' }}>{fmtNum(v.km)}</td>
+                          <td style={{ ...css.td, ...css.num, textAlign: 'right', color: theme.accent }}>{fmtMoney(v.maint)}</td>
+                          <td style={{ ...css.td, ...css.num, textAlign: 'right', color: theme.green }}>{fmtMoney(v.fuel)}</td>
+                          <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700 }}>{fmtMoney(v.total)}</td>
+                          <td style={{ ...css.td, ...css.num, textAlign: 'right', color: theme.muted }}>
+                            {v.km > 0 ? fmtMoney(v.total / v.km, 2) : '—'}
                           </td>
                         </tr>
                       ))}
                       <tr style={{ background: theme.bg }}>
-                        <td style={{ ...css.td, fontWeight: 800 }} colSpan={2}>TOTAL</td>
-                        <td style={{ ...css.td, textAlign: 'right', fontWeight: 700 }}>{stats.totalKm.toLocaleString()}</td>
-                        <td style={{ ...css.td, textAlign: 'right', fontWeight: 700, color: '#3b82f6' }}>{stats.totalMaint.toFixed(0)}€</td>
-                        <td style={{ ...css.td, textAlign: 'right', fontWeight: 700, color: theme.green }}>{stats.totalFuel.toFixed(0)}€</td>
-                        <td style={{ ...css.td, textAlign: 'right', fontWeight: 800, color: theme.accent }}>{stats.grandTotal.toFixed(0)}€</td>
-                        <td style={{ ...css.td, textAlign: 'right', fontWeight: 700, color: theme.muted }}>
-                          {stats.totalKm > 0 ? `${(stats.grandTotal / stats.totalKm).toFixed(2)}€` : '—'}
+                        <td style={{ ...css.td, ...css.lbl, color: theme.white }} colSpan={2}>{t('common.total')}</td>
+                        <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700 }}>{fmtNum(stats.totalKm)}</td>
+                        <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700, color: theme.accent }}>{fmtMoney(stats.totalMaint)}</td>
+                        <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700, color: theme.green }}>{fmtMoney(stats.totalFuel)}</td>
+                        <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700, color: theme.white }}>{fmtMoney(stats.grandTotal)}</td>
+                        <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700, color: theme.muted }}>
+                          {stats.totalKm > 0 ? fmtMoney(stats.grandTotal / stats.totalKm, 2) : '—'}
                         </td>
                       </tr>
                     </tbody>
@@ -265,24 +309,21 @@ export default function UserStats({ user, onToast }) {
             {/* Monthly chart */}
             {stats.grandTotal > 0 && (
               <div style={{ ...css.card, padding: mob ? 12 : 20, marginBottom: 12 }}>
-                <h3 style={{ ...css.h3, marginBottom: 16 }}>Gastos mensuales (todos los vehículos)</h3>
-                <div style={{ width: '100%', height: mob ? 220 : 280 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={stats.monthlyData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                      <XAxis dataKey="name" tick={{ fill: theme.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: theme.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                      <Bar dataKey="maint" name="Mantenimiento" fill="#3b82f6" radius={[4, 4, 0, 0]} stackId="a" />
-                      <Bar dataKey="fuel" name="Combustible" fill="#22c55e" radius={[4, 4, 0, 0]} stackId="a" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <h3 style={{ ...css.h3, marginBottom: 16 }}>{t('stats.monthly')}</h3>
+                <AreaChart
+                  data={stats.monthlyData.map(m => ({ label: m.name, total: m.maint + m.fuel, lower: m.fuel, upper: m.maint }))}
+                  height={mob ? 200 : 260}
+                  lowerColor={SERIES.fuel()}
+                  upperColor={SERIES.maint()}
+                  showAverage
+                  showLabels
+                />
                 <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 8 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: theme.muted }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 0, background: '#3b82f6', display: 'inline-block' }} /> Mantenimiento
+                  <span style={{ ...css.lbl, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 9, height: 9, background: SERIES.maint(), display: 'inline-block' }} /> {t('common.maintenance')}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: theme.muted }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 0, background: '#22c55e', display: 'inline-block' }} /> Combustible
+                  <span style={{ ...css.lbl, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ width: 9, height: 9, background: SERIES.fuel(), display: 'inline-block' }} /> {t('common.fuel')}
                   </span>
                 </div>
               </div>
@@ -291,24 +332,21 @@ export default function UserStats({ user, onToast }) {
             {/* Spending distribution pie */}
             {stats.spendPie.length > 1 && (
               <div style={{ ...css.card, padding: mob ? 12 : 20 }}>
-                <h3 style={{ ...css.h3, marginBottom: 16 }}>Distribución del gasto por vehículo</h3>
-                <div style={{ display: 'flex', flexDirection: mob ? 'column' : 'row', gap: 16, alignItems: 'center' }}>
-                  <div style={{ width: mob ? 180 : 200, height: mob ? 180 : 200, flexShrink: 0 }}>
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie data={stats.spendPie} cx="50%" cy="50%" outerRadius={mob ? 75 : 85} innerRadius={mob ? 40 : 50} dataKey="value" stroke="none">
-                          {stats.spendPie.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
+                <h3 style={{ ...css.h3, marginBottom: 16 }}>{t('stats.distribution')}</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {/* Ordenado de mayor a menor: la silueta baja sola y
+                      se lee como un reparto entre vehículos. */}
+                  <AreaChart
+                    data={stats.spendPie.map(v => ({ label: v.name, total: v.value }))}
+                    height={mob ? 130 : 160}
+                    showLabels
+                  />
                   <div style={{ flex: 1, width: '100%' }}>
                     {stats.spendPie.map((v, i) => (
                       <div key={v.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 0, background: PIE_COLORS[i % PIE_COLORS.length], flexShrink: 0 }} />
+                        <span style={{ ...css.num, fontSize: 11, color: theme.mutedLight, width: 16, flexShrink: 0 }}>{i + 1}</span>
                         <span style={{ flex: 1, color: theme.text }}>{v.name}</span>
-                        <span style={{ fontWeight: 700, color: theme.text }}>{v.value}€</span>
+                        <span style={{ ...css.num, fontWeight: 700, color: theme.text }}>{fmtMoney(v.value)}</span>
                         <span style={{ color: theme.muted, fontSize: 11, width: 40, textAlign: 'right' }}>
                           {stats.grandTotal > 0 ? ((v.value / stats.grandTotal) * 100).toFixed(0) : 0}%
                         </span>
@@ -318,6 +356,7 @@ export default function UserStats({ user, onToast }) {
                 </div>
               </div>
             )}
+            </TwoColumn>
           </>
         )}
       </div>

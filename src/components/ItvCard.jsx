@@ -1,30 +1,31 @@
 import { useState, useEffect } from 'react'
 import { ShieldCheck, ShieldAlert, ShieldX, Plus, Edit2, Trash2, Save, Calendar } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
+import { t, useLang, fmtDate } from '../lib/i18n.js'
 import { formatDate } from '../lib/constants.js'
 import { createItvRecord, updateItvRecord, deleteItvRecord } from '../lib/api.js'
 import { Modal, Field, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 
 const RESULTS = [
-  { value: 'favorable', label: 'Favorable', color: theme.green, desc: 'Sin defectos' },
-  { value: 'desfavorable', label: 'Desfavorable', color: theme.yellow, desc: 'Defectos leves — plazo para reparar' },
-  { value: 'negativa', label: 'Negativa', color: theme.red, desc: 'Defectos graves — no puede circular' },
+  { value: 'favorable', get label() { return t('itv.favorable') }, get color() { return theme.green }, get desc() { return t('itv.noDefects') } },
+  { value: 'desfavorable', get label() { return t('itv.unfavorable') }, get color() { return theme.yellow }, get desc() { return t('itv.minorNote') } },
+  { value: 'negativa', get label() { return t('itv.negative') }, get color() { return theme.red }, get desc() { return t('itv.severeNote') } },
 ]
 
 function getItvStatus(record) {
-  if (!record) return { status: 'none', label: 'Sin ITV registrada', color: theme.mutedLight }
-  if (record.result === 'negativa') return { status: 'failed', label: 'No apta — Negativa', color: theme.red }
-  if (record.result === 'desfavorable' && !record.resolved) return { status: 'defects', label: 'Pendiente reparar', color: theme.yellow }
-  if (!record.expiry_date) return { status: 'unknown', label: 'Sin fecha de caducidad', color: theme.muted }
+  if (!record) return { status: 'none', label: t('itv.empty'), color: theme.mutedLight }
+  if (record.result === 'negativa') return { status: 'failed', label: t('itv.notRoadworthy'), color: theme.red }
+  if (record.result === 'desfavorable' && !record.resolved) return { status: 'defects', label: t('itv.pendingFix'), color: theme.yellow }
+  if (!record.expiry_date) return { status: 'unknown', label: t('itv.noExpiry'), color: theme.muted }
 
   const today = new Date()
   const expiry = new Date(record.expiry_date)
   const daysLeft = Math.floor((expiry - today) / 86400000)
 
-  if (daysLeft < 0) return { status: 'expired', label: `Caducada hace ${Math.abs(daysLeft)} días`, color: theme.red }
-  if (daysLeft <= 30) return { status: 'soon', label: `Caduca en ${daysLeft} días`, color: theme.yellow }
-  if (daysLeft <= 60) return { status: 'approaching', label: `Caduca en ${daysLeft} días`, color: theme.accent }
-  return { status: 'valid', label: `Válida hasta ${formatDate(record.expiry_date)}`, color: theme.green }
+  if (daysLeft < 0) return { status: 'expired', label: t('itv.expiredAgo', { n: Math.abs(daysLeft) }), color: theme.red }
+  if (daysLeft <= 30) return { status: 'soon', label: t('itv.expiresIn', { n: daysLeft }), color: theme.yellow }
+  if (daysLeft <= 60) return { status: 'approaching', label: t('itv.expiresIn', { n: daysLeft }), color: theme.accent }
+  return { status: 'valid', label: t('itv.validUntil', { date: formatDate(record.expiry_date) }), color: theme.green }
 }
 
 function ItvFormModal({ open, onClose, onSave, initial, isEditing }) {
@@ -67,17 +68,17 @@ function ItvFormModal({ open, onClose, onSave, initial, isEditing }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isEditing ? 'Editar ITV' : 'Nueva ITV'}>
+    <Modal open={open} onClose={onClose} title={isEditing ? t('itv.edit') : t('itv.new')}>
       <ResponsiveGrid2>
-        <Field label="Fecha inspección">
+        <Field label={t('itv.inspectionDate')}>
           <DateInput value={form.inspection_date} onChange={e => set('inspection_date', e.target.value)} />
         </Field>
-        <Field label="Fecha caducidad">
+        <Field label={t('itv.expiryDate')}>
           <DateInput value={form.expiry_date} onChange={e => set('expiry_date', e.target.value)} />
         </Field>
       </ResponsiveGrid2>
 
-      <Field label="Resultado">
+      <Field label={t('itv.result')}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {RESULTS.map(r => (
             <button key={r.value} onClick={() => set('result', r.value)} type="button" style={{
@@ -93,50 +94,50 @@ function ItvFormModal({ open, onClose, onSave, initial, isEditing }) {
       </Field>
 
       {(form.result === 'desfavorable' || form.result === 'negativa') && (
-        <Field label="Defectos encontrados">
+        <Field label={t('itv.defectsFound')}>
           <textarea style={{ ...css.input, minHeight: 70, resize: 'vertical' }} value={form.defects}
-            onChange={e => set('defects', e.target.value)} placeholder="Describe los defectos..." />
+            onChange={e => set('defects', e.target.value)} placeholder={t('itv.defectsPh')} />
         </Field>
       )}
 
       {form.result === 'desfavorable' && (
-        <Field label="¿Reparado y pasado?">
+        <Field label={t('itv.repairedQ')}>
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={() => set('resolved', false)} style={{
               ...css.btn(!form.resolved ? theme.accent : theme.bg, !form.resolved ? '#000' : theme.muted),
               flex: 1, justifyContent: 'center', border: `1px solid ${theme.border}`,
-            }}>⏳ Pendiente</button>
+            }}>{t('itv.pendingFix')}</button>
             <button type="button" onClick={() => set('resolved', true)} style={{
               ...css.btn(form.resolved ? theme.green : theme.bg, form.resolved ? '#000' : theme.muted),
               flex: 1, justifyContent: 'center', border: `1px solid ${theme.border}`,
-            }}>✅ Reparado</button>
+            }}>{t('itv.repaired')}</button>
           </div>
         </Field>
       )}
 
       <ResponsiveGrid2>
-        <Field label="Estación ITV">
-          <input style={css.input} value={form.station} onChange={e => set('station', e.target.value)} placeholder="Nombre estación" />
+        <Field label={t('itv.stationName')}>
+          <input style={css.input} value={form.station} onChange={e => set('station', e.target.value)} placeholder={t('itv.stationPh')} />
         </Field>
-        <Field label="Coste (€)">
+        <Field label={t('car.costEur')}>
           <NumInput decimal value={form.cost} onChange={e => set('cost', +e.target.value)} />
         </Field>
       </ResponsiveGrid2>
-      <Field label="Notas">
+      <Field label={t('common.notes')}>
         <input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Observaciones..." />
       </Field>
 
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
-        <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
+        <button onClick={onClose} style={css.btnOutline}>{t('common.cancel')}</button>
         <button onClick={handleSave} disabled={saving} style={css.btn()}>
-          <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
+          <Save size={14} /> {saving ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </Modal>
   )
 }
 
-export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile }) {
+export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile, dense }) {
   const [showForm, setShowForm] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
@@ -176,13 +177,13 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
       setShowForm(false)
       setEditRecord(null)
       onReload()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este registro de ITV?')) return
+    if (!confirm(t('itv.confirm'))) return
     try { await deleteItvRecord(id); onToast('Registro eliminado'); onReload() }
-    catch (err) { onToast('Error: ' + err.message, 'error') }
+    catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const StatusIcon = itvStatus.status === 'valid' || itvStatus.status === 'approaching'
@@ -192,7 +193,7 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
   return (
     <>
       <div style={{
-        ...css.card, marginBottom: 16, padding: isMobile ? 14 : 18,
+        ...css.card, marginBottom: dense ? 0 : 16, padding: isMobile ? 14 : 18,
         border: isAlert ? `1px solid ${itvStatus.color}40` : `1px solid ${theme.border}`,
         background: isAlert ? `${itvStatus.color}08` : theme.card,
       }}>
@@ -203,12 +204,12 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: 700, fontSize: 14, color: theme.white }}>ITV</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: theme.white }}>{t('itv.short')}</span>
                 <span style={css.badge(`${itvStatus.color}20`, itvStatus.color)}>{itvStatus.label}</span>
               </div>
               {latest && (
                 <div style={{ fontSize: 12, color: theme.muted, marginTop: 4 }}>
-                  Inspección: {formatDate(latest.inspection_date)} · {RESULTS.find(r => r.value === latest.result)?.label}
+                  {t('itv.inspectedOn', { date: formatDate(latest.inspection_date) })} · {RESULTS.find(r => r.value === latest.result)?.label}
                   {latest.station ? ` · ${latest.station}` : ''}
                   {latest.cost ? ` · ${latest.cost}€` : ''}
                   {latest.defects && <span style={{ color: theme.yellow }}> · {latest.defects}</span>}
@@ -219,11 +220,11 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             {latest && (
               <button onClick={() => openEdit(latest)} style={css.btnSm(theme.accentSoft, theme.accent)}>
-                <Edit2 size={12} /> {isMobile ? '' : 'Editar'}
+                <Edit2 size={12} /> {isMobile ? '' : t('common.edit')}
               </button>
             )}
             <button onClick={openNew} style={css.btnSm(theme.accent, '#000')}>
-              <Plus size={12} /> {isMobile ? '' : 'Nueva'}
+              <Plus size={12} /> {isMobile ? '' : t('common.new')}
             </button>
             {itvRecords.length > 1 && (
               <button onClick={() => setShowHistory(!showHistory)} style={css.btnSm(theme.bg, theme.muted)}>

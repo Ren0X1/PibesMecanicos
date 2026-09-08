@@ -1,25 +1,17 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Plus, Trash2, Save, Users, Car, Key, BarChart3, ShieldCheck, Edit2, Check, X, UserCog, Inbox } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import AreaChart from './AreaChart.jsx'
 import { theme, css } from '../lib/theme.js'
+import { t, useLang, fmtNum } from '../lib/i18n.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords, getPendingGroups, approveGroup, rejectGroup } from '../lib/api.js'
 import { getMaintStatus, formatDate } from '../lib/constants.js'
 import { Modal, Field, Loader, Stat } from './ui.jsx'
+import { useTwoCol, Panel, Row, AttentionList } from './TwoColumn.jsx'
 
-const COLORS = ['#f59e0b', '#3b82f6', '#22c55e', '#ef4444', '#8b5cf6']
-
-const CustomTooltip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null
-  return (
-    <div style={{ background: theme.card, border: `1px solid ${theme.border}`, borderRadius: 0, padding: '8px 12px', fontSize: 12 }}>
-      <div style={{ fontWeight: 700, marginBottom: 2, color: theme.text }}>{label}</div>
-      {payload.map((p, i) => <div key={i} style={{ color: p.color }}>{p.name}: {p.value}</div>)}
-    </div>
-  )
-}
 
 export default function AdminPanel({ onToast }) {
+  useLang()
   const mob = useIsMobile()
   const [users, setUsers] = useState([])
   const [allCars, setAllCars] = useState([])
@@ -52,7 +44,7 @@ export default function AdminPanel({ onToast }) {
       setAllCars(cars)
       setAllMaint(maints)
       try { setPendingGroups(await getPendingGroups()) } catch {}
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
     finally { setLoading(false) }
   }
 
@@ -64,21 +56,21 @@ export default function AdminPanel({ onToast }) {
     try {
       await createProfile({ ...newUser, pin_change_required: true })
       setNewUser({ name: '', username: '', pin: '1234', role: 'user' })
-      setShowNew(false); onToast('Usuario creado — se le pedirá cambiar el PIN'); loadAll()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+      setShowNew(false); onToast(t('adm.userCreated')); loadAll()
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
     finally { setSaving(false) }
   }
 
   const handleDelete = async (id, name) => {
-    if (!confirm(`¿Eliminar al usuario "${name}"?`)) return
-    try { await deleteProfile(id); onToast('Usuario eliminado'); loadAll() }
-    catch (err) { onToast('Error: ' + err.message, 'error') }
+    if (!confirm(t('adm.deleteUser', { name }))) return
+    try { await deleteProfile(id); onToast(t('adm.userDeleted')); loadAll() }
+    catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleForcePin = async (id, name) => {
-    if (!confirm(`¿Forzar cambio de PIN para "${name}"?`)) return
-    try { await updateProfile(id, { pin_change_required: true }); onToast(`Se pedirá a ${name} que cambie su PIN`); loadAll() }
-    catch (err) { onToast('Error: ' + err.message, 'error') }
+    if (!confirm(t('adm.forcePin', { name }))) return
+    try { await updateProfile(id, { pin_change_required: true }); onToast(t('adm.forcePinDone', { name })); loadAll() }
+    catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const openEdit = (u) => {
@@ -95,32 +87,32 @@ export default function AdminPanel({ onToast }) {
         username: editForm.username.trim().toLowerCase(),
         role: editForm.role,
       })
-      setEditUser(null); onToast('Usuario actualizado'); loadAll()
-    } catch (err) { onToast('Error: ' + (err.message?.includes('duplicate') ? 'Ese usuario ya existe' : err.message), 'error') }
+      setEditUser(null); onToast(t('adm.userUpdated')); loadAll()
+    } catch (err) { onToast(t('common.error') + ': ' + (err.message?.includes('duplicate') ? t('adm.userExists') : err.message), 'error') }
     finally { setSaving(false) }
   }
 
   const handleSaveResetPin = async () => {
-    if (newPin.length < 4) return onToast('El PIN debe tener al menos 4 dígitos', 'error')
+    if (newPin.length < 4) return onToast(t('pin.errShort'), 'error')
     setSaving(true)
     try {
       // Reset PIN + force change on next login for security
       await updateProfile(resetPinUser.id, { pin: newPin, pin_change_required: true })
       setResetPinUser(null); setNewPin('')
-      onToast('PIN restablecido — el usuario deberá cambiarlo al entrar'); loadAll()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+      onToast(t('adm.pinReset')); loadAll()
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
     finally { setSaving(false) }
   }
 
   const handleApproveGroup = async (g) => {
-    try { await approveGroup(g.id, g.created_by); onToast(`Grupo "${g.name}" aprobado`); loadAll() }
-    catch (err) { onToast('Error: ' + err.message, 'error') }
+    try { await approveGroup(g.id, g.created_by); onToast(t('adm.approved', { name: g.name })); loadAll() }
+    catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleRejectGroup = async (g) => {
-    if (!confirm(`¿Rechazar la solicitud del grupo "${g.name}"?`)) return
-    try { await rejectGroup(g.id); onToast('Solicitud rechazada'); loadAll() }
-    catch (err) { onToast('Error: ' + err.message, 'error') }
+    if (!confirm(t('adm.rejectConfirm', { name: g.name }))) return
+    try { await rejectGroup(g.id); onToast(t('adm.reqRejected')); loadAll() }
+    catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   // Stats
@@ -131,38 +123,60 @@ export default function AdminPanel({ onToast }) {
 
     const carsPerUser = users.map(u => ({ name: u.name, count: allCars.filter(c => c.user_id === u.id).length }))
     const vehicleTypes = [
-      { name: 'Coches', value: allCars.filter(c => c.vehicle_type !== 'moto').length },
-      { name: 'Motos', value: allCars.filter(c => c.vehicle_type === 'moto').length },
+      { name: t('veh.coche'), value: allCars.filter(c => c.vehicle_type !== 'moto').length },
+      { name: t('veh.moto'), value: allCars.filter(c => c.vehicle_type === 'moto').length },
     ].filter(v => v.value > 0)
 
     return { totalKm, ok, warn, overdue, total: ok + warn + overdue, carsPerUser, vehicleTypes }
   }, [users, allCars, allMaint])
 
-  if (loading) return <Loader text="Cargando panel..." />
+  const { two } = useTwoCol()
+
+  if (loading) return <Loader text={t('common.loading')} />
 
   const tabs = [
-    { id: 'users', icon: <Users size={14} />, label: 'Usuarios' },
-    { id: 'groups', icon: <Inbox size={14} />, label: 'Grupos', badge: pendingGroups.length > 0 ? pendingGroups.length : null },
-    { id: 'stats', icon: <BarChart3 size={14} />, label: 'Estadísticas' },
+    { id: 'users', icon: <Users size={14} />, label: t('adm.users') },
+    { id: 'groups', icon: <Inbox size={14} />, label: t('grp.title'), badge: pendingGroups.length > 0 ? pendingGroups.length : null },
+    { id: 'stats', icon: <BarChart3 size={14} />, label: t('adm.stats') },
   ]
 
   return (
     <div style={css.container}>
       <div style={{ paddingTop: mob ? 20 : 28, paddingBottom: 40 }}>
-        <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26, marginBottom: 20 }}>Administración</h1>
+        <h1 style={{ ...css.h1, fontSize: mob ? 22 : 26, marginBottom: 20 }}>{t('adm.title')}</h1>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: theme.bg, borderRadius: 0, padding: 4 }}>
+        {/* Tres columnas cuando hay sitio: menú, contenido y lo que
+            hay que atender. Debajo de 1024 se apila y el menú
+            vuelve a ser una tira. */}
+        <div style={two ? {
+          display: 'grid',
+          gridTemplateColumns: 'minmax(170px, 200px) minmax(0, 1fr) 290px',
+          gap: 14, alignItems: 'start',
+        } : null}>
+
+        {/* El menú: una tira arriba cuando no hay sitio, y una
+            columna a la izquierda cuando lo hay. Es el mismo botón
+            con la caja puesta de otra manera. */}
+        <div style={{
+          display: 'flex',
+          flexDirection: two ? 'column' : 'row',
+          gap: 4, marginBottom: two ? 0 : 20,
+          background: theme.bg, padding: 4,
+          ...(two ? { position: 'sticky', top: `calc(68px + var(--pm-banner, 0px))` } : null),
+        }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
-              display: 'flex', alignItems: 'center', gap: mob ? 4 : 5, flex: 1, justifyContent: 'center', minWidth: 0,
+              display: 'flex', alignItems: 'center', gap: mob ? 4 : 5,
+              flex: two ? 'none' : 1,
+              justifyContent: two ? 'flex-start' : 'center', minWidth: 0,
               background: tab === t.id ? theme.card : 'transparent', color: tab === t.id ? theme.text : theme.muted,
               border: tab === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-              borderRadius: 0, padding: mob ? '8px 4px' : '8px 12px', cursor: 'pointer', fontWeight: 600,
+              borderRadius: 0, padding: mob ? '8px 4px' : '10px 12px', cursor: 'pointer', fontWeight: 600,
               fontSize: mob ? 12 : 13, fontFamily: 'inherit', whiteSpace: 'nowrap',
+              textAlign: 'left',
             }}>
               {t.icon}
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', flex: two ? 1 : 'none' }}>{t.label}</span>
               {t.badge && (
                 <span style={{
                   background: theme.red, color: '#fff', borderRadius: 0, minWidth: 17, height: 17,
@@ -174,13 +188,14 @@ export default function AdminPanel({ onToast }) {
           ))}
         </div>
 
+        <div style={{ minWidth: 0 }}>
         {tab === 'users' && (
           <>
             <div style={{ ...css.flexBetween, marginBottom: 16, gap: 12 }}>
               <p style={css.subtitle}>
-                {users.filter(u => u.role === 'admin').length} admin{users.filter(u => u.role === 'admin').length !== 1 ? 's' : ''} · {users.filter(u => u.role !== 'admin').length} usuario{users.filter(u => u.role !== 'admin').length !== 1 ? 's' : ''}
+                {t('adm.adminCount', { n: users.filter(u => u.role === 'admin').length })} · {t('adm.userCount', { n: users.filter(u => u.role !== 'admin').length })}
               </p>
-              <button onClick={() => setShowNew(true)} style={css.btn()}><Plus size={16} /> {mob ? 'Nuevo' : 'Nuevo Usuario'}</button>
+              <button onClick={() => setShowNew(true)} style={css.btn()}><Plus size={16} /> {mob ? t('common.new') : t('adm.newUser')}</button>
             </div>
 
             {(() => {
@@ -200,23 +215,23 @@ export default function AdminPanel({ onToast }) {
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
                             <span style={{ fontWeight: 700, fontSize: 15, color: theme.text }}>{u.name}</span>
-                            {u.pin_change_required && <span style={css.badge(theme.yellowSoft, theme.yellow)}>PIN pendiente</span>}
+                            {u.pin_change_required && <span style={css.badge(theme.yellowSoft, theme.yellow)}>{t('adm.pinPending')}</span>}
                           </div>
                           <p style={{ fontSize: 12, color: theme.muted }}>
-                            @{u.username} · {uCars.length} vehículo{uCars.length !== 1 ? 's' : ''}
+                            @{u.username} · {uCars.length === 1 ? t('common.vehCount1') : t('common.vehCount', { n: uCars.length })}
                           </p>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                        <button onClick={() => openEdit(u)} title="Editar usuario"
+                        <button onClick={() => openEdit(u)} title={t('adm.editUser')}
                           style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
                         <button onClick={() => { setResetPinUser(u); setNewPin('') }} title="Restablecer PIN"
-                          style={css.btnSm('rgba(59,130,246,0.12)', '#3b82f6')}><Key size={12} /></button>
+                          style={css.btnSm('rgba(59,130,246,0.12)', theme.accent)}><Key size={12} /></button>
                         {!isAdminUser && (
                           <>
                             <button onClick={() => handleForcePin(u.id, u.name)} title="Forzar cambio de PIN"
                               style={css.btnSm(theme.yellowSoft, theme.yellow)}><UserCog size={12} /></button>
-                            <button onClick={() => handleDelete(u.id, u.name)} title="Eliminar"
+                            <button onClick={() => handleDelete(u.id, u.name)} title={t('common.delete')}
                               style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
                           </>
                         )}
@@ -232,50 +247,50 @@ export default function AdminPanel({ onToast }) {
                   {/* Administradores */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <ShieldCheck size={15} color={theme.accent} />
-                    <h3 style={{ ...css.h3, fontSize: 14 }}>Administradores</h3>
+                    <h3 style={{ ...css.h3, fontSize: 14 }}>{t('adm.admins')}</h3>
                     <span style={css.badge(theme.accentSoft, theme.accent)}>{admins.length}</span>
                   </div>
                   <div style={{ display: 'grid', gap: 10, marginBottom: 24 }}>
                     {admins.length > 0
                       ? admins.map(renderUserCard)
-                      : <p style={{ ...css.subtitle, padding: '8px 0' }}>No hay administradores.</p>}
+                      : <p style={{ ...css.subtitle, padding: '8px 0' }}>{t('adm.noAdmins')}</p>}
                   </div>
 
                   {/* Usuarios */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <Users size={15} color={theme.muted} />
-                    <h3 style={{ ...css.h3, fontSize: 14 }}>Usuarios</h3>
+                    <h3 style={{ ...css.h3, fontSize: 14 }}>{t('adm.users')}</h3>
                     <span style={css.badge(theme.greenSoft, theme.green)}>{regular.length}</span>
                   </div>
                   <div style={{ display: 'grid', gap: 10 }}>
                     {regular.length > 0
                       ? regular.map(renderUserCard)
-                      : <p style={{ ...css.subtitle, padding: '8px 0' }}>No hay usuarios normales todavía.</p>}
+                      : <p style={{ ...css.subtitle, padding: '8px 0' }}>{t('adm.noUsers')}</p>}
                   </div>
                 </>
               )
             })()}
 
-            <Modal open={showNew} onClose={() => setShowNew(false)} title="Nuevo Usuario">
-              <p style={{ ...css.subtitle, marginBottom: 16 }}>Se le pedirá cambiar el PIN en su primer inicio de sesión.</p>
-              <Field label="Nombre"><input style={css.input} value={newUser.name} onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))} placeholder="Nombre" /></Field>
-              <Field label="Usuario"><input style={css.input} value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))} placeholder="nombre_usuario" /></Field>
+            <Modal open={showNew} onClose={() => setShowNew(false)} title={t('adm.newUser')}>
+              <p style={{ ...css.subtitle, marginBottom: 16 }}>{t('adm.pinNote')}</p>
+              <Field label={t('common.name')}><input style={css.input} value={newUser.name} onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))} placeholder={t('adm.namePh')} /></Field>
+              <Field label={t('common.user')}><input style={css.input} value={newUser.username} onChange={e => setNewUser(p => ({ ...p, username: e.target.value }))} placeholder={t('adm.userPh')} /></Field>
               <Field label="PIN temporal"><input style={css.input} inputMode="numeric" pattern="[0-9]*" value={newUser.pin} onChange={e => setNewUser(p => ({ ...p, pin: e.target.value.replace(/[^\d]/g, '') }))} placeholder="1234" /></Field>
               <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
-                <button onClick={() => setShowNew(false)} style={css.btnOutline}>Cancelar</button>
-                <button onClick={handleAdd} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Creando...' : 'Crear'}</button>
+                <button onClick={() => setShowNew(false)} style={css.btnOutline}>{t('common.cancel')}</button>
+                <button onClick={handleAdd} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? t('common.saving') : t('common.create')}</button>
               </div>
             </Modal>
 
             {/* Edit user modal */}
-            <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Editar usuario">
-              <Field label="Nombre">
+            <Modal open={!!editUser} onClose={() => setEditUser(null)} title={t('adm.editUser')}>
+              <Field label={t('common.name')}>
                 <input style={css.input} value={editForm.name}
-                  onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} placeholder="Nombre" />
+                  onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} placeholder={t('adm.namePh')} />
               </Field>
-              <Field label="Usuario">
+              <Field label={t('common.user')}>
                 <input style={css.input} value={editForm.username}
-                  onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))} placeholder="nombre_usuario" />
+                  onChange={e => setEditForm(p => ({ ...p, username: e.target.value }))} placeholder={t('adm.userPh')} />
               </Field>
               <Field label="Rol">
                 <div style={{ display: 'flex', gap: 6 }}>
@@ -285,30 +300,30 @@ export default function AdminPanel({ onToast }) {
                                  editForm.role === r ? '#000' : theme.muted),
                       flex: 1, justifyContent: 'center',
                       border: `1px solid ${editForm.role === r ? (r === 'admin' ? theme.accent : theme.green) : theme.border}`,
-                    }}>{r === 'admin' ? '🛡️ Admin' : '👤 Usuario'}</button>
+                    }}>{r === 'admin' ? t('adm.roleAdmin') : t('adm.roleUser')}</button>
                   ))}
                 </div>
               </Field>
               <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
-                <button onClick={() => setEditUser(null)} style={css.btnOutline}>Cancelar</button>
-                <button onClick={handleSaveEdit} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}</button>
+                <button onClick={() => setEditUser(null)} style={css.btnOutline}>{t('common.cancel')}</button>
+                <button onClick={handleSaveEdit} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? t('common.saving') : t('common.save')}</button>
               </div>
             </Modal>
 
             {/* Reset PIN modal */}
             <Modal open={!!resetPinUser} onClose={() => setResetPinUser(null)} title="Restablecer PIN">
               <p style={{ ...css.subtitle, marginBottom: 16 }}>
-                Establece un PIN nuevo para <strong style={{ color: theme.text }}>{resetPinUser?.name}</strong>.
-                Se le pedirá cambiarlo la próxima vez que entre.
+                {t('adm.resetPinFor', { name: resetPinUser?.name || '' })}
+                {' '}{t('adm.resetPinNote')}
               </p>
-              <Field label="Nuevo PIN">
+              <Field label={t('pin.new')}>
                 <input style={css.input} inputMode="numeric" pattern="[0-9]*" type="text" value={newPin}
                   onChange={e => setNewPin(e.target.value.replace(/[^\d]/g, ''))}
-                  placeholder="Mínimo 4 dígitos"
+                  placeholder={t('pin.min')}
                   onKeyDown={e => e.key === 'Enter' && handleSaveResetPin()} />
               </Field>
               <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
-                <button onClick={() => setResetPinUser(null)} style={css.btnOutline}>Cancelar</button>
+                <button onClick={() => setResetPinUser(null)} style={css.btnOutline}>{t('common.cancel')}</button>
                 <button onClick={handleSaveResetPin} disabled={saving || newPin.length < 4} style={css.btn()}><Key size={14} /> {saving ? 'Guardando...' : 'Restablecer'}</button>
               </div>
             </Modal>
@@ -319,12 +334,12 @@ export default function AdminPanel({ onToast }) {
         {tab === 'groups' && (
           <>
             <p style={{ ...css.subtitle, marginBottom: 16 }}>
-              Solicitudes de grupo pendientes de aprobación. Al aprobar, el solicitante se convierte en administrador del grupo y puede invitar a más gente.
+              {t('adm.reqHelp')}
             </p>
             {pendingGroups.length === 0 ? (
               <div style={{ ...css.card, padding: 40, textAlign: 'center' }}>
                 <Inbox size={40} color={theme.mutedLight} style={{ marginBottom: 12 }} />
-                <p style={{ color: theme.muted, fontSize: 13 }}>No hay solicitudes pendientes</p>
+                <p style={{ color: theme.muted, fontSize: 13 }}>{t('adm.noRequests')}</p>
               </div>
             ) : (
               <div style={{ display: 'grid', gap: 10 }}>
@@ -338,16 +353,16 @@ export default function AdminPanel({ onToast }) {
                         <div>
                           <h3 style={{ ...css.h3, marginBottom: 2 }}>{g.name}</h3>
                           <p style={{ fontSize: 12, color: theme.muted }}>
-                            Solicitado por {g.profiles?.name || '—'} · {formatDate(g.created_at?.split('T')[0])}
+                            {t('adm.requestedBy', { name: g.profiles?.name || '—' })} · {formatDate(g.created_at?.split('T')[0])}
                           </p>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <button onClick={() => handleApproveGroup(g)} style={css.btn(theme.green, '#fff')}>
-                          <Check size={14} /> Aprobar
+                          <Check size={14} /> {t('adm.approve')}
                         </button>
                         <button onClick={() => handleRejectGroup(g)} style={css.btn(theme.redSoft, theme.red)}>
-                          <X size={14} /> Rechazar
+                          <X size={14} /> {t('adm.reject')}
                         </button>
                       </div>
                     </div>
@@ -362,26 +377,22 @@ export default function AdminPanel({ onToast }) {
           <>
             {/* Summary stats */}
             <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr 1fr' : 'repeat(4, 1fr)', gap: mob ? 8 : 12, marginBottom: 20 }}>
-              <Stat icon={<Users size={18} color={theme.accent} />} label="Usuarios" value={users.length} />
-              <Stat icon={<Car size={18} color="#3b82f6" />} label="Vehículos" value={allCars.length} color="#3b82f6" />
+              <Stat icon={<Users size={18} color={theme.accent} />} label={t('adm.users')} value={users.length} />
+              <Stat icon={<Car size={18} color={theme.accent} />} label={t('common.vehicles')} value={allCars.length} />
               <Stat icon={<ShieldCheck size={18} color={theme.green} />} label="Mant. OK" value={stats.ok} color={theme.green} />
-              <Stat icon={<BarChart3 size={18} color={theme.red} />} label="Mant. vencidos" value={stats.overdue} color={theme.red} />
+              <Stat icon={<BarChart3 size={18} color={theme.red} />} label={t('adm.overdueMaint')} value={stats.overdue} color={theme.red} />
             </div>
 
             {/* Cars per user chart */}
             {stats.carsPerUser.length > 0 && (
               <div style={{ ...css.card, padding: mob ? 12 : 20, marginBottom: 12 }}>
-                <h3 style={{ ...css.h3, marginBottom: 16 }}>Vehículos por usuario</h3>
-                <div style={{ width: '100%', height: 200 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={stats.carsPerUser} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                      <XAxis dataKey="name" tick={{ fill: theme.muted, fontSize: 12 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: theme.muted, fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="count" name="Vehículos" fill={theme.accent} radius={[6, 6, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <h3 style={{ ...css.h3, marginBottom: 16 }}>{t('adm.perUser')}</h3>
+                <AreaChart
+                  data={stats.carsPerUser.map(u => ({ label: u.name, total: u.count }))}
+                  height={200}
+                  format={fmtNum}
+                  showLabels
+                />
               </div>
             )}
 
@@ -389,22 +400,18 @@ export default function AdminPanel({ onToast }) {
             <div style={{ display: 'grid', gridTemplateColumns: mob ? '1fr' : '1fr 1fr', gap: 12 }}>
               {stats.vehicleTypes.length > 0 && (
                 <div style={{ ...css.card, padding: mob ? 12 : 20 }}>
-                  <h3 style={{ ...css.h3, marginBottom: 16 }}>Tipos de vehículo</h3>
-                  <div style={{ width: '100%', height: 180 }}>
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie data={stats.vehicleTypes} cx="50%" cy="50%" outerRadius={70} innerRadius={40} dataKey="value" stroke="none">
-                          {stats.vehicleTypes.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 4 }}>
-                    {stats.vehicleTypes.map((v, i) => (
-                      <span key={v.name} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: theme.muted }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 0, background: COLORS[i], display: 'inline-block' }} />
-                        {v.name}: {v.value}
+                  <h3 style={{ ...css.h3, marginBottom: 16 }}>{t('adm.vehicleTypes')}</h3>
+                  <AreaChart
+                    data={stats.vehicleTypes.map(v => ({ label: v.name, total: v.value }))}
+                    height={170}
+                    format={fmtNum}
+                  />
+                  {/* Sin tarta ya no hay un color por tipo, así que la
+                      leyenda se queda en nombre y cuenta. */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
+                    {stats.vehicleTypes.map(v => (
+                      <span key={v.name} style={{ ...css.lbl, fontSize: 9 }}>
+                        {v.name} <span style={{ ...css.num, color: theme.white }}>{fmtNum(v.value)}</span>
                       </span>
                     ))}
                   </div>
@@ -413,28 +420,26 @@ export default function AdminPanel({ onToast }) {
 
               {stats.total > 0 && (
                 <div style={{ ...css.card, padding: mob ? 12 : 20 }}>
-                  <h3 style={{ ...css.h3, marginBottom: 16 }}>Estado mantenimientos</h3>
-                  <div style={{ width: '100%', height: 180 }}>
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie data={[
-                          { name: 'Al día', value: stats.ok },
-                          { name: 'Próximos', value: stats.warn },
-                          { name: 'Vencidos', value: stats.overdue },
-                        ].filter(v => v.value > 0)} cx="50%" cy="50%" outerRadius={70} innerRadius={40} dataKey="value" stroke="none">
-                          <Cell fill={theme.green} />
-                          <Cell fill={theme.yellow} />
-                          <Cell fill={theme.red} />
-                        </Pie>
-                        <Tooltip content={<CustomTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 4 }}>
-                    {[{ l: 'OK', c: theme.green, v: stats.ok }, { l: 'Próx.', c: theme.yellow, v: stats.warn }, { l: 'Venc.', c: theme.red, v: stats.overdue }].map(x => (
-                      <span key={x.l} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: theme.muted }}>
-                        <span style={{ width: 10, height: 10, borderRadius: 0, background: x.c, display: 'inline-block' }} />
-                        {x.l}: {x.v}
+                  <h3 style={{ ...css.h3, marginBottom: 16 }}>{t('adm.maintState')}</h3>
+                  {/* Aquí el color no es una serie sino un estado, y eso
+                      lo dice la leyenda de abajo: el área va en el
+                      acento como el resto. */}
+                  <AreaChart
+                    data={[
+                      { label: t('adm.upToDate'), total: stats.ok },
+                      { label: t('adm.upcoming'), total: stats.warn },
+                      { label: t('adm.overdue'), total: stats.overdue },
+                    ]}
+                    height={170}
+                    format={fmtNum}
+                  />
+                  {/* El color va en la cifra, no en un cuadrado: aquí
+                      verde, ámbar y rojo son el estado, y un cuadrado
+                      debajo de un gráfico se lee como su leyenda. */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 10 }}>
+                    {[{ l: t('status.ok'), c: theme.green, v: stats.ok }, { l: t('adm.upcomingShort'), c: theme.yellow, v: stats.warn }, { l: t('adm.overdueShort'), c: theme.red, v: stats.overdue }].map(x => (
+                      <span key={x.l} style={{ ...css.lbl, fontSize: 9 }}>
+                        {x.l} <span style={{ ...css.num, fontSize: 12, color: x.c }}>{fmtNum(x.v)}</span>
                       </span>
                     ))}
                   </div>
@@ -444,11 +449,46 @@ export default function AdminPanel({ onToast }) {
 
             {/* Total km */}
             <div style={{ ...css.card, padding: 16, marginTop: 12, textAlign: 'center' }}>
-              <span style={{ fontSize: 12, color: theme.muted }}>Kilómetros totales registrados</span>
-              <div style={{ fontSize: 28, fontWeight: 800, color: theme.accent }}>{stats.totalKm.toLocaleString()} km</div>
+              <span style={{ fontSize: 12, color: theme.muted }}>{t('adm.totalKm')}</span>
+              <div style={{ fontSize: 28, fontWeight: 800, color: theme.accent }}>{fmtNum(stats.totalKm)} km</div>
             </div>
           </>
         )}
+        </div>
+
+        {two && (
+          <aside style={{
+            position: 'sticky',
+            top: `calc(68px + var(--pm-banner, 0px))`,
+            display: 'flex', flexDirection: 'column', gap: 12,
+          }}>
+            <Panel
+              title={t('adm.requests')}
+              right={pendingGroups.length || null}
+              onClick={() => setTab('groups')}
+            >
+              <AttentionList
+                empty={t('adm.noRequests')}
+                items={pendingGroups.slice(0, 5).map(g => ({
+                  key: g.id,
+                  title: g.name,
+                  sub: g.profiles?.name || t('common.unknown'),
+                  color: theme.yellow,
+                }))}
+              />
+            </Panel>
+
+            <Panel title={t('adm.fleet')}>
+              <Row label={t('adm.users')} value={fmtNum(users.length)} />
+              <Row label={t('common.vehicles')} value={fmtNum(allCars.length)} />
+              <Row label={t('status.ok')} value={fmtNum(stats.ok)} color={theme.green} />
+              <Row label={t('adm.upcomingShort')} value={fmtNum(stats.warn)} color={stats.warn ? theme.yellow : theme.muted} />
+              <Row label={t('adm.overdueShort')} value={fmtNum(stats.overdue)} color={stats.overdue ? theme.red : theme.muted} />
+              <Row label={t('adm.totalKm')} value={fmtNum(stats.totalKm)} />
+            </Panel>
+          </aside>
+        )}
+        </div>
       </div>
     </div>
   )
