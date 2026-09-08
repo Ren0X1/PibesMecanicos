@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "eslint src && vitest run && vite build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
@@ -15,14 +19,20 @@
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^1.16.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "recharts": "^2.15.3"
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
-    "vite": "^8.0.16"
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
+    "jsdom": "^25.0.1",
+    "vite": "^8.0.16",
+    "vitest": "^3.2.7"
   },
   "overrides": {
     "uuid": "^11.1.1"
