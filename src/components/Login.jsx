@@ -5,6 +5,7 @@ import { login, hasSupabaseConfig } from '../lib/api.js'
 import { enterDemo } from '../lib/demo/mode.js'
 import { t, useLang } from '../lib/i18n.js'
 import { Field } from './ui.jsx'
+import Footer from './Footer.jsx'
 
 function getLockout() {
   try {
@@ -86,9 +87,12 @@ export default function Login({ onLogin }) {
 
   return (
     <div style={{
-      minHeight: '100vh', minHeight: '100dvh', background: theme.bg,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      minHeight: '100dvh', background: theme.bg,
+      display: 'flex', flexDirection: 'column',
     }}>
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}>
       <div style={{ width: '100%', maxWidth: 380 }}>
 
         {/* Marca */}
@@ -179,7 +183,8 @@ export default function Login({ onLogin }) {
         <div style={{ borderTop: `1px solid ${theme.border}`, marginTop: 26, paddingTop: 18 }}>
           <p style={{
             ...css.lbl, textTransform: 'none', letterSpacing: '0.02em',
-            fontSize: 12, color: theme.muted, marginBottom: 12, lineHeight: 1.55,
+            fontSize: 12.5, color: theme.muted, marginBottom: 12,
+            textAlign: 'center',
           }}>
             {t('login.demoBody')}
           </p>
@@ -191,6 +196,8 @@ export default function Login({ onLogin }) {
           </button>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }

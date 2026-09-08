@@ -31,6 +31,12 @@
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+      /* Ancho del contenido, en un solo sitio: lo usan la barra
+         superior y todas las vistas, así que nunca se descuadran. */
+      :root { --pm-max: 1280px; }
+      @media (min-width: 1280px) { :root { --pm-max: 1400px; } }
+      @media (min-width: 1800px) { :root { --pm-max: 1760px; } }
+
       body {
         font-family: Archivo, system-ui, -apple-system, 'Segoe UI', sans-serif;
         background: #121213;

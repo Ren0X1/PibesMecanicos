@@ -46,15 +46,17 @@ const light = {
    chocaban con el verde de «al día» y el rojo de «vencido», y un
    acento que se confunde con un estado hace la interfaz peor. */
 
+/* Sin etiqueta: el nombre se traduce al pintar, con la clave
+   accent.<id>, para que siga al idioma sin recargar. */
 export const ACCENTS = {
-  mandarina: { label: 'Mandarina', dark: '#ff7a1f', light: '#a84a0c' },
-  turquesa:  { label: 'Turquesa',  dark: '#2dd4bf', light: '#0d7d70' },
-  manzana:   { label: 'Manzana',   dark: '#9fd93a', light: '#5c7a12' },
-  oro:       { label: 'Oro',       dark: '#eac136', light: '#8a6a10' },
-  coral:     { label: 'Coral',     dark: '#ff7a68', light: '#bd4536' },
-  frambuesa: { label: 'Frambuesa', dark: '#e8446f', light: '#b52350' },
-  purpura:   { label: 'Púrpura',   dark: '#a855f7', light: '#6d28d9' },
-  marfil:    { label: 'Marfil',    dark: '#ecdfc4', light: '#7a6a48' },
+  mandarina: { dark: '#ff7a1f', light: '#a84a0c' },
+  turquesa:  { dark: '#2dd4bf', light: '#0d7d70' },
+  manzana:   { dark: '#9fd93a', light: '#5c7a12' },
+  oro:       { dark: '#eac136', light: '#8a6a10' },
+  coral:     { dark: '#ff7a68', light: '#bd4536' },
+  frambuesa: { dark: '#e8446f', light: '#b52350' },
+  purpura:   { dark: '#a855f7', light: '#6d28d9' },
+  marfil:    { dark: '#ecdfc4', light: '#7a6a48' },
 }
 
 export const DEFAULT_ACCENT = 'mandarina'
@@ -141,7 +143,9 @@ export function setThemeMode(m) {
 // ─── Helpers de estilo (getters: siempre leen el tema vivo) ───
 
 export const css = {
-  get container() { return { maxWidth: 1120, margin: '0 auto', padding: '0 18px' } },
+  /* El ancho lo fija --pm-max en index.html; así la barra superior y
+     el contenido crecen a la vez y quedan alineados. */
+  get container() { return { width: '100%', maxWidth: 'var(--pm-max)', margin: '0 auto', padding: '0 20px' } },
   get flex() { return { display: 'flex', alignItems: 'center', gap: 8 } },
   get flexBetween() { return { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
 
@@ -226,6 +230,13 @@ export const css = {
       letterSpacing: '0.13em', textTransform: 'uppercase',
       display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
     }
+  },
+
+  /* Paleta de las gráficas. Sale del tema, así que si cambias el
+     acento cambian todas las gráficas de la aplicación. Es función
+     y no constante para que no se congele al importar. */
+  get chartColors() {
+    return [theme.accent, theme.green, theme.yellow, theme.red, theme.muted, theme.mutedLight]
   },
 
   /* Cifras: siempre monoespaciadas y de ancho fijo. */

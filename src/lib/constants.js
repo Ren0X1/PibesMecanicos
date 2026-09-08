@@ -1,36 +1,43 @@
+import { t } from './i18n.js'
+
+/* Los identificadores (value, id) NO se traducen nunca: son lo que
+   viaja a la base de datos. Lo que se traduce es la etiqueta, y se
+   resuelve al pintar, no al definir, porque el idioma puede cambiar
+   sin recargar la página. */
+
 export const VEHICLE_TYPES = [
-  { value: 'coche', label: 'Coche', emoji: '🚗' },
-  { value: 'moto', label: 'Moto', emoji: '🏍️' },
+  { value: 'coche', emoji: '🚗', get label() { return t('veh.coche') } },
+  { value: 'moto', emoji: '🏍️', get label() { return t('veh.moto') } },
 ]
 
 export const MAINT_TYPES = [
   // ── Ambos ──
-  { id: 'aceite', name: 'Aceite Motor', emoji: '🛢️', defKm: 10000, defMonths: 12, for: ['coche', 'moto'] },
-  { id: 'filtro_aceite', name: 'Filtro de Aceite', emoji: '🔧', defKm: 10000, defMonths: 12, for: ['coche', 'moto'] },
-  { id: 'filtro_aire', name: 'Filtro de Aire', emoji: '💨', defKm: 20000, defMonths: 24, for: ['coche', 'moto'] },
-  { id: 'pastillas_del', name: 'Pastillas Freno Del.', emoji: '🛑', defKm: 40000, defMonths: 48, for: ['coche', 'moto'] },
-  { id: 'pastillas_tras', name: 'Pastillas Freno Tras.', emoji: '🛑', defKm: 50000, defMonths: 60, for: ['coche', 'moto'] },
-  { id: 'discos_freno', name: 'Discos de Freno', emoji: '💿', defKm: 70000, defMonths: 72, for: ['coche', 'moto'] },
-  { id: 'neumaticos', name: 'Neumáticos', emoji: '⭕', defKm: 45000, defMonths: 60, for: ['coche', 'moto'] },
-  { id: 'liquido_frenos', name: 'Líquido de Frenos', emoji: '💧', defKm: 40000, defMonths: 24, for: ['coche', 'moto'] },
-  { id: 'refrigerante', name: 'Refrigerante', emoji: '❄️', defKm: 50000, defMonths: 24, for: ['coche', 'moto'] },
-  { id: 'bateria', name: 'Batería', emoji: '🔋', defKm: 60000, defMonths: 48, for: ['coche', 'moto'] },
-  { id: 'embrague', name: 'Embrague', emoji: '🦶', defKm: 120000, defMonths: 0, for: ['coche', 'moto'] },
-  { id: 'amortiguadores', name: 'Amortiguadores', emoji: '🔽', defKm: 80000, defMonths: 72, for: ['coche', 'moto'] },
+  { id: 'aceite', get name() { return t('maint.aceite') }, emoji: '🛢️', defKm: 10000, defMonths: 12, for: ['coche', 'moto'] },
+  { id: 'filtro_aceite', get name() { return t('maint.filtro_aceite') }, emoji: '🔧', defKm: 10000, defMonths: 12, for: ['coche', 'moto'] },
+  { id: 'filtro_aire', get name() { return t('maint.filtro_aire') }, emoji: '💨', defKm: 20000, defMonths: 24, for: ['coche', 'moto'] },
+  { id: 'pastillas_del', get name() { return t('maint.pastillas_del') }, emoji: '🛑', defKm: 40000, defMonths: 48, for: ['coche', 'moto'] },
+  { id: 'pastillas_tras', get name() { return t('maint.pastillas_tras') }, emoji: '🛑', defKm: 50000, defMonths: 60, for: ['coche', 'moto'] },
+  { id: 'discos_freno', get name() { return t('maint.discos_freno') }, emoji: '💿', defKm: 70000, defMonths: 72, for: ['coche', 'moto'] },
+  { id: 'neumaticos', get name() { return t('maint.neumaticos') }, emoji: '⭕', defKm: 45000, defMonths: 60, for: ['coche', 'moto'] },
+  { id: 'liquido_frenos', get name() { return t('maint.liquido_frenos') }, emoji: '💧', defKm: 40000, defMonths: 24, for: ['coche', 'moto'] },
+  { id: 'refrigerante', get name() { return t('maint.refrigerante') }, emoji: '❄️', defKm: 50000, defMonths: 24, for: ['coche', 'moto'] },
+  { id: 'bateria', get name() { return t('maint.bateria') }, emoji: '🔋', defKm: 60000, defMonths: 48, for: ['coche', 'moto'] },
+  { id: 'embrague', get name() { return t('maint.embrague') }, emoji: '🦶', defKm: 120000, defMonths: 0, for: ['coche', 'moto'] },
+  { id: 'amortiguadores', get name() { return t('maint.amortiguadores') }, emoji: '🔽', defKm: 80000, defMonths: 72, for: ['coche', 'moto'] },
   // ── Bujías: gasolina (coches+motos) — NO diésel ──
-  { id: 'bujias', name: 'Bujías', emoji: '⚡', defKm: 40000, defMonths: 48, for: ['coche', 'moto'], excludeFuel: ['Diésel'] },
+  { id: 'bujias', get name() { return t('maint.bujias') }, emoji: '⚡', defKm: 40000, defMonths: 48, for: ['coche', 'moto'], excludeFuel: ['Diésel'] },
   // ── Calentadores: solo diésel (solo coches) ──
-  { id: 'calentadores', name: 'Calentadores', emoji: '🔥', defKm: 100000, defMonths: 0, for: ['coche'], onlyFuel: ['Diésel'] },
+  { id: 'calentadores', get name() { return t('maint.calentadores') }, emoji: '🔥', defKm: 100000, defMonths: 0, for: ['coche'], onlyFuel: ['Diésel'] },
   // ── Solo coches ──
-  { id: 'filtro_habitaculo', name: 'Filtro Habitáculo', emoji: '🌬️', defKm: 15000, defMonths: 12, for: ['coche'] },
-  { id: 'correa_dist', name: 'Correa Distribución', emoji: '⛓️', defKm: 120000, defMonths: 60, for: ['coche'] },
-  { id: 'diferencial', name: 'Aceite Diferencial', emoji: '⚙️', defKm: 60000, defMonths: 60, for: ['coche'] },
-  { id: 'caja_cambios', name: 'Aceite Caja Cambios', emoji: '🔄', defKm: 60000, defMonths: 60, for: ['coche'] },
-  { id: 'escobillas', name: 'Escobillas Limpiaparabrisas', emoji: '🧹', defKm: 0, defMonths: 12, for: ['coche'] },
+  { id: 'filtro_habitaculo', get name() { return t('maint.filtro_habitaculo') }, emoji: '🌬️', defKm: 15000, defMonths: 12, for: ['coche'] },
+  { id: 'correa_dist', get name() { return t('maint.correa_dist') }, emoji: '⛓️', defKm: 120000, defMonths: 60, for: ['coche'] },
+  { id: 'diferencial', get name() { return t('maint.diferencial') }, emoji: '⚙️', defKm: 60000, defMonths: 60, for: ['coche'] },
+  { id: 'caja_cambios', get name() { return t('maint.caja_cambios') }, emoji: '🔄', defKm: 60000, defMonths: 60, for: ['coche'] },
+  { id: 'escobillas', get name() { return t('maint.escobillas') }, emoji: '🧹', defKm: 0, defMonths: 12, for: ['coche'] },
   // ── Solo motos ──
-  { id: 'cadena', name: 'Cadena', emoji: '⛓️', defKm: 25000, defMonths: 36, for: ['moto'] },
-  { id: 'kit_arrastre', name: 'Kit Arrastre (piñón+corona)', emoji: '🔗', defKm: 25000, defMonths: 36, for: ['moto'] },
-  { id: 'liquido_embrague', name: 'Líquido Embrague', emoji: '💧', defKm: 40000, defMonths: 24, for: ['moto'] },
+  { id: 'cadena', get name() { return t('maint.cadena') }, emoji: '⛓️', defKm: 25000, defMonths: 36, for: ['moto'] },
+  { id: 'kit_arrastre', get name() { return t('maint.kit_arrastre') }, emoji: '🔗', defKm: 25000, defMonths: 36, for: ['moto'] },
+  { id: 'liquido_embrague', get name() { return t('maint.liquido_embrague') }, emoji: '💧', defKm: 40000, defMonths: 24, for: ['moto'] },
 ]
 
 export function getMaintenanceForVehicle(vehicleType, fuelType) {
@@ -42,8 +49,15 @@ export function getMaintenanceForVehicle(vehicleType, fuelType) {
   })
 }
 
+/* Los valores se guardan en castellano por compatibilidad con lo
+   que ya hay en la base de datos; solo cambia cómo se muestran. */
 export const FUEL_TYPES = ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico', 'GLP']
+export const fuelLabel = (v) => t(`fuel.${v}`)
 export const TRANS_TYPES = ['Manual', 'Automático']
+export const transLabel = (v) => t(`trans.${v}`)
+
+export const DRIVE_MODES = ['ciudad', 'mixto', 'carretera']
+export const driveLabel = (v) => t(`drive.${v}`)
 
 export function getMaintStatus(maint, currentKm) {
   if (!maint) return null
@@ -60,9 +74,6 @@ export function getMaintStatus(maint, currentKm) {
   return 'ok'
 }
 
-export function formatDate(dateStr) {
-  if (!dateStr) return '—'
-  const parts = dateStr.split('-')
-  if (parts.length !== 3) return dateStr
-  return `${parts[2]}/${parts[1]}/${parts[0]}`
-}
+/* Se mantiene el nombre por compatibilidad, pero ahora respeta el
+   idioma: en alemán es 07.09.2026 y en chino 2026/09/07. */
+export { fmtDate as formatDate } from './i18n.js'

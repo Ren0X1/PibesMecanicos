@@ -5,6 +5,7 @@ import { LANGS, t, useLang } from '../lib/i18n.js'
 import { currentPrefs, applyPrefs, savePrefs } from '../lib/prefs.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { Modal } from './ui.jsx'
+import Footer from './Footer.jsx'
 
 /* ─────────────────────────────────────────────────────────────
    Controles de preferencias, compartidos por el asistente de
@@ -80,10 +81,11 @@ export function AccentPicker({ value, onChange, mode }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
         {ids.map(id => {
           const a = ACCENTS[id]
+          const name = t(`accent.${id}`)
           const swatch = isLight ? a.light : a.dark
           const on = value === id
           return (
-            <button key={id} onClick={() => onChange(id)} title={a.label} style={{
+            <button key={id} onClick={() => onChange(id)} title={name} style={{
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
               padding: '11px 4px', cursor: 'pointer',
               background: on ? theme.accentSoft : 'transparent',
@@ -100,7 +102,7 @@ export function AccentPicker({ value, onChange, mode }) {
                 ...css.lbl, fontSize: 7.5, letterSpacing: '0.1em',
                 color: on ? theme.white : theme.mutedLight,
                 overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', whiteSpace: 'nowrap',
-              }}>{a.label}</span>
+              }}>{name}</span>
             </button>
           )
         })}
@@ -170,9 +172,13 @@ export function Onboarding({ user, onDone }) {
 
   return (
     <div style={{
-      minHeight: '100vh', minHeight: '100dvh', background: theme.bg,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: mob ? 18 : 24,
+      minHeight: '100dvh', background: theme.bg,
+      display: 'flex', flexDirection: 'column',
     }}>
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: mob ? 18 : 24,
+      }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
 
         <div style={{
@@ -226,6 +232,8 @@ export function Onboarding({ user, onDone }) {
           </button>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }

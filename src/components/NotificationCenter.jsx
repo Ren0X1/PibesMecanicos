@@ -3,7 +3,7 @@ import { Bell, X, AlertTriangle, Clock, ShieldAlert, ChevronRight, BellOff, Undo
 import { theme, css } from '../lib/theme.js'
 import { getCars, getMaintenanceRecords, getItvRecords, getReminders, getMyInvitations } from '../lib/api.js'
 import { MAINT_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
-import { t, useLang } from '../lib/i18n.js'
+import { t, useLang, fmtNum } from '../lib/i18n.js'
 import { getSnoozed, snooze, unsnooze, daysLeft, SNOOZE_DAYS } from '../lib/snooze.js'
 
 export default function NotificationCenter({ userId, isMobile, dataVersion }) {
@@ -61,8 +61,14 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
               title: mt?.name || m.type_id,
               vehicle: `${vEmoji} ${vName}`,
               detail: status === 'overdue'
-                ? `Vencido${kmLeft < 0 ? ` · ${Math.abs(kmLeft).toLocaleString()} km pasados` : ''}${daysLeft != null && daysLeft < 0 ? ` · hace ${Math.abs(daysLeft)} días` : ''}`
-                : `Próximo${kmLeft > 0 ? ` · en ${kmLeft.toLocaleString()} km` : ''}${daysLeft != null && daysLeft > 0 ? ` · en ${daysLeft} días` : ''}`,
+                ? [t('notif.overdue'),
+                   kmLeft < 0 ? t('notif.kmPast', { n: fmtNum(Math.abs(kmLeft)) }) : null,
+                   daysLeft != null && daysLeft < 0 ? t('notif.daysAgo', { n: Math.abs(daysLeft) }) : null,
+                  ].filter(Boolean).join(' · ')
+                : [t('notif.soon'),
+                   kmLeft > 0 ? t('notif.kmLeft', { n: fmtNum(kmLeft) }) : null,
+                   daysLeft != null && daysLeft > 0 ? t('notif.daysLeft', { n: daysLeft }) : null,
+                  ].filter(Boolean).join(' · '),
               priority: status === 'overdue' ? 0 : 1,
             })
           }
@@ -75,14 +81,14 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
             allAlerts.push({
               id: `itv-neg-${car.id}`, type: 'danger', icon: '🛡️',
               title: 'ITV Negativa', vehicle: `${vEmoji} ${vName}`,
-              detail: `No apta — ${latestItv.defects || 'revisar defectos'}`,
+              detail: t('itv.failedWith', { what: latestItv.defects || t('itv.checkDefects') }),
               priority: 0,
             })
           } else if (latestItv.result === 'desfavorable' && !latestItv.resolved) {
             allAlerts.push({
               id: `itv-desf-${car.id}`, type: 'warning', icon: '🛡️',
               title: 'ITV Desfavorable', vehicle: `${vEmoji} ${vName}`,
-              detail: `Pendiente reparar — ${latestItv.defects || 'revisar defectos'}`,
+              detail: t('itv.pendingWith', { what: latestItv.defects || t('itv.checkDefects') }),
               priority: 0,
             })
           } else if (latestItv.expiry_date) {
@@ -90,15 +96,15 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
             if (dLeft < 0) {
               allAlerts.push({
                 id: `itv-exp-${car.id}`, type: 'danger', icon: '🛡️',
-                title: 'ITV Caducada', vehicle: `${vEmoji} ${vName}`,
-                detail: `Caducada hace ${Math.abs(dLeft)} días`,
+                title: t('itv.expiredTitle'), vehicle: `${vEmoji} ${vName}`,
+                detail: t('itv.expiredAgo', { n: Math.abs(dLeft) }),
                 priority: 0,
               })
             } else if (dLeft <= 60) {
               allAlerts.push({
                 id: `itv-soon-${car.id}`, type: dLeft <= 30 ? 'warning' : 'info', icon: '🛡️',
-                title: 'ITV próxima', vehicle: `${vEmoji} ${vName}`,
-                detail: `Caduca en ${dLeft} días (${formatDate(latestItv.expiry_date)})`,
+                title: t('itv.soonTitle'), vehicle: `${vEmoji} ${vName}`,
+                detail: t('itv.soonWithDate', { n: dLeft, date: formatDate(latestItv.expiry_date) }),
                 priority: dLeft <= 30 ? 0 : 1,
               })
             }
@@ -112,19 +118,19 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
         const today = new Date(); today.setHours(0, 0, 0, 0)
         const due = new Date(r.due_date); due.setHours(0, 0, 0, 0)
         const days = Math.floor((due - today) / 86400000)
-        const carInfo = r.cars ? `${r.cars.vehicle_type === 'moto' ? '🏍️' : '🚗'} ${r.cars.brand} ${r.cars.model}` : '📌 General'
+        const carInfo = r.cars ? `${r.cars.vehicle_type === 'moto' ? '🏍️' : '🚗'} ${r.cars.brand} ${r.cars.model}` : t('rem.generalShort')
         if (days < 0) {
           allAlerts.push({
             id: `rem-${r.id}`, type: 'danger', icon: '🔔',
             title: r.title, vehicle: carInfo,
-            detail: `Vencido hace ${Math.abs(days)} día${Math.abs(days) !== 1 ? 's' : ''}`,
+            detail: t('notif.overdueBy', { n: Math.abs(days) }),
             priority: 0,
           })
         } else if (days <= 7) {
           allAlerts.push({
             id: `rem-${r.id}`, type: days <= 1 ? 'warning' : 'info', icon: '🔔',
             title: r.title, vehicle: carInfo,
-            detail: days === 0 ? 'Hoy' : days === 1 ? 'Mañana' : `En ${days} días`,
+            detail: days === 0 ? 'Hoy' : days === 1 ? t('rem.tomorrow') : t('rem.inDays', { n: days }),
             priority: days <= 1 ? 1 : 2,
           })
         }
@@ -136,8 +142,8 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
         invitations.forEach(inv => {
           allAlerts.push({
             id: `inv-${inv.id}`, type: 'info', icon: '👥',
-            title: `Invitación a "${inv.groups?.name}"`, vehicle: '✨ Grupo',
-            detail: `Te ha invitado ${inv.inviter?.name || 'alguien'} · ve a Grupos`,
+            title: t('notif.invitation', { name: inv.groups?.name }), vehicle: t('notif.group'),
+            detail: t('notif.goGroups', { name: inv.inviter?.name || t('common.unknown') }),
             priority: 2,
           })
         })

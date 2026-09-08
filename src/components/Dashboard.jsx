@@ -3,9 +3,11 @@ import { Car, Plus, Trash2, Save } from 'lucide-react'
 import { theme, css, FONT } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts, getItvRecords } from '../lib/api.js'
-import { FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, getMaintStatus } from '../lib/constants.js'
+import { FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, MAINT_TYPES, getMaintStatus, fuelLabel, transLabel } from '../lib/constants.js'
 import { Modal, Field, Loader, ResponsiveGrid2, NumInput, SectionHead, Gauge } from './ui.jsx'
-import { t, useLang } from '../lib/i18n.js'
+import { useMediaQuery } from '../lib/useTouch.js'
+import DesktopGarage from './DesktopGarage.jsx'
+import { t, useLang, fmtNum } from '../lib/i18n.js'
 import CarDetail from './CarDetail.jsx'
 
 function CarFormModal({ open, onClose, onSave }) {
@@ -48,12 +50,12 @@ function CarFormModal({ open, onClose, onSave }) {
         <Field label={t('dash.year')}><NumInput value={form.year} onChange={e => set('year', +e.target.value)} /></Field>
         <Field label={t('dash.transmission')}>
           <select style={css.select} value={form.transmission} onChange={e => set('transmission', e.target.value)}>
-            {TRANS_TYPES.map(t => <option key={t}>{t}</option>)}
+            {TRANS_TYPES.map(v => <option key={v} value={v}>{transLabel(v)}</option>)}
           </select>
         </Field>
         <Field label={t('dash.fuel')}>
           <select style={css.select} value={form.fuel} onChange={e => set('fuel', e.target.value)}>
-            {FUEL_TYPES.map(t => <option key={t}>{t}</option>)}
+            {FUEL_TYPES.map(v => <option key={v} value={v}>{fuelLabel(v)}</option>)}
           </select>
         </Field>
         <Field label={t('dash.currentKm')}><NumInput value={form.current_km} onChange={e => set('current_km', +e.target.value)} /></Field>
@@ -99,11 +101,28 @@ function VehicleCard({ car, meta, onOpen, onDelete, mob }) {
     else if (dLeft !== null && dLeft <= 30) itvBadge = { bg: theme.yellowSoft, color: theme.yellow, text: t('dash.itvDays', { n: dLeft }) }
   }
 
+  /* La más apremiante: primero las vencidas, luego las próximas,
+     y dentro de cada grupo la que menos kilómetros le quedan. */
+  const urgent = (() => {
+    const list = (mt.maint || [])
+      .map(r => ({ r, status: getMaintStatus(r, car.current_km) }))
+      .filter(x => x.status === 'overdue' || x.status === 'warn')
+      .sort((a, b) => (a.r.next_km - car.current_km) - (b.r.next_km - car.current_km))
+    const first = list[0]
+    if (!first) return null
+    const type = MAINT_TYPES.find(x => x.id === first.r.type_id)
+    return {
+      name: type?.name || first.r.type_id,
+      status: first.status,
+      left: first.r.next_km - car.current_km,
+    }
+  })()
+
   const meta1 = [
-    `${car.current_km.toLocaleString('es-ES')} km`,
+    `${fmtNum(car.current_km)} ${t('common.km')}`,
     car.year,
-    car.fuel,
-    car.transmission,
+    fuelLabel(car.fuel),
+    transLabel(car.transmission),
     ...(mt.partsCount > 0 ? [t('dash.parts', { n: mt.partsCount })] : []),
   ]
 
@@ -151,6 +170,29 @@ function VehicleCard({ car, meta, onOpen, onDelete, mob }) {
         {mt.maint.length === 0 && <span style={css.badge('transparent', theme.mutedLight)}>{t('dash.noMaint')}</span>}
         {itvBadge && <span style={css.badge(itvBadge.bg, itvBadge.color)}>{itvBadge.text}</span>}
       </div>
+
+      {/* La intervención más urgente, y solo esa: es lo que evita
+          tener que entrar en el coche para saber qué toca, sin que
+          la ficha crezca hasta ocupar media pantalla. */}
+      {urgent && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 9,
+          borderTop: `1px solid ${theme.border}`, marginTop: 11, paddingTop: 9,
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%', flexShrink: 0,
+            background: urgent.status === 'overdue' ? theme.red
+              : urgent.status === 'warn' ? theme.yellow : theme.green,
+          }} />
+          <span style={{
+            flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 500,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{urgent.name}</span>
+          <span style={{ ...css.lbl, ...css.num, fontSize: 10, letterSpacing: '0.04em' }}>
+            {fmtNum(urgent.left)} {t('common.km')}
+          </span>
+        </div>
+      )}
     </article>
   )
 }
@@ -158,6 +200,13 @@ function VehicleCard({ car, meta, onOpen, onDelete, mob }) {
 export default function Dashboard({ user, onToast }) {
   useLang()
   const mob = useIsMobile()
+  /* 1024 es el iPad mini de lado: a partir de ahí ya compensa el
+     raíl. La columna de contexto necesita 1400 para no ahogar la
+     tabla, y a 1800 se estira todo. */
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
+  const hasContext = useMediaQuery('(min-width: 1400px)')
+  const isXWide = useMediaQuery('(min-width: 1800px)')
+  const isTall = useMediaQuery('(min-height: 900px)')
   const [cars, setCars] = useState([])
   const [carMeta, setCarMeta] = useState({})
   const [loading, setLoading] = useState(true)
@@ -176,7 +225,7 @@ export default function Dashboard({ user, onToast }) {
         meta[car.id] = { maint, partsCount: parts.length, itv: itv[0] || null }
       }
       setCarMeta(meta)
-    } catch (err) { onToast('Error cargando vehículos: ' + err.message, 'error') }
+    } catch (err) { onToast(t('dash.loadError') + err.message, 'error') }
     finally { setLoading(false) }
   }
 
@@ -186,13 +235,13 @@ export default function Dashboard({ user, onToast }) {
     try {
       await createCar({ ...form, user_id: user.id })
       setShowNewCar(false); onToast(t('dash.added')); loadCars()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleDeleteCar = async (id) => {
     if (!confirm(t('dash.deleteConfirm'))) return
     try { await deleteCar(id); onToast(t('dash.deleted')); loadCars() }
-    catch (err) { onToast('Error: ' + err.message, 'error') }
+    catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   if (selectedCarId) {
@@ -206,6 +255,26 @@ export default function Dashboard({ user, onToast }) {
   }
 
   if (loading) return <Loader text={t('common.loading')} />
+
+  /* A partir de 1280 px hay sitio para el raíl y la ficha al lado.
+     Por debajo, la lista de siempre: apretar más solo empeoraría. */
+  if (isDesktop && cars.length > 0) {
+    return (
+      <>
+        <DesktopGarage
+          cars={cars}
+          meta={carMeta}
+          wide={isXWide}
+          context={hasContext}
+          tall={isTall}
+          onAdd={() => setShowNewCar(true)}
+          onOpenFull={(id) => setSelectedCarId(id)}
+          onToast={onToast}
+        />
+        <CarFormModal open={showNewCar} onClose={() => setShowNewCar(false)} onSave={handleAddCar} />
+      </>
+    )
+  }
 
   const needAttention = cars.filter(c => {
     const { overdue, warn } = health((carMeta[c.id] || {}).maint, c.current_km)
@@ -246,7 +315,7 @@ export default function Dashboard({ user, onToast }) {
         ) : (
           <div style={{
             display: 'grid', gap: 10,
-            gridTemplateColumns: mob ? '1fr' : 'repeat(auto-fill, minmax(340px, 1fr))',
+            gridTemplateColumns: mob ? '1fr' : 'repeat(auto-fill, minmax(330px, 1fr))',
           }}>
             {cars.map(car => (
               <VehicleCard

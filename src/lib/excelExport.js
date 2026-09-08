@@ -1,5 +1,6 @@
+import { t } from './i18n.js'
 import ExcelJS from 'exceljs'
-import { getMaintStatus, formatDate, getMaintenanceForVehicle } from './constants.js'
+import { getMaintStatus, formatDate, getMaintenanceForVehicle, driveLabel } from './constants.js'
 
 // ─── Color palette (ARGB hex) ───
 const C = {
@@ -38,9 +39,9 @@ function calcAvgConsumption(fuelLogs) {
 
 function statusFill(status) {
   const map = {
-    'AL DÍA': { bg: C.greenLight, fg: C.green },
-    'PRÓXIMO': { bg: C.yellowLight, fg: C.yellow },
-    'VENCIDO': { bg: C.redLight, fg: C.red },
+    [t('status.ok')]: { bg: C.greenLight, fg: C.green },
+    [t('status.warn')]: { bg: C.yellowLight, fg: C.yellow },
+    [t('status.overdue')]: { bg: C.redLight, fg: C.red },
     'NEGATIVA': { bg: C.redLight, fg: C.red },
     'DESFAVORABLE': { bg: C.yellowLight, fg: C.yellow },
     'FAVORABLE': { bg: C.greenLight, fg: C.green },
@@ -96,13 +97,13 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
   })
 
   // ════════════ SHEET 1: RESUMEN ════════════
-  const ws1 = wb.addWorksheet('Resumen', { views: [{ showGridLines: false }] })
+  const ws1 = wb.addWorksheet(t('rep.summary'), { views: [{ showGridLines: false }] })
   ws1.columns = [{ width: 30 }, { width: 46 }]
-  addTitle(ws1, `INFORME — ${car.brand.toUpperCase()} ${car.model.toUpperCase()}`, C.amber, 2)
+  addTitle(ws1, t('rep.reportOf', { name: `${car.brand.toUpperCase()} ${car.model.toUpperCase()}` }), C.amber, 2)
 
   ws1.mergeCells('A2:B2')
   const sub = ws1.getCell('A2')
-  sub.value = `Generado el ${today}`
+  sub.value = t('rep.generatedOn', { date: today })
   sub.font = { name: 'Calibri', size: 10, italic: true, color: { argb: C.white } }
   sub.fill = fill(C.amberDark)
   sub.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -135,76 +136,76 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
   }
 
   ws1.addRow([])
-  section(ws1, '  DATOS DEL VEHÍCULO')
-  kv(ws1, 'Marca y modelo', `${car.brand} ${car.model}`)
-  kv(ws1, 'Matrícula', car.plate)
-  kv(ws1, 'Tipo', car.vehicle_type === 'moto' ? '🏍️ Moto' : '🚗 Coche')
-  kv(ws1, 'Año', car.year)
-  kv(ws1, 'Combustible', car.fuel)
-  kv(ws1, 'Transmisión', car.transmission)
-  kv(ws1, 'Kilómetros actuales', car.current_km || 0, { align: 'right', numFmt: '#,##0 "km"', bold: true })
-  kv(ws1, 'Notas', car.notes || '—')
+  section(ws1, '  ' + t('rep.vehicleData'))
+  kv(ws1, t('rep.makeModel'), `${car.brand} ${car.model}`)
+  kv(ws1, t('common.plate'), car.plate)
+  kv(ws1, t('common.type'), car.vehicle_type === 'moto' ? t('veh.moto') : t('veh.coche'))
+  kv(ws1, t('rep.year'), car.year)
+  kv(ws1, t('common.fuel'), car.fuel)
+  kv(ws1, t('dash.transmission'), car.transmission)
+  kv(ws1, t('rep.currentKm'), car.current_km || 0, { align: 'right', numFmt: '#,##0 "km"', bold: true })
+  kv(ws1, t('common.notes'), car.notes || '—')
 
   ws1.addRow([])
-  section(ws1, '  RESUMEN ECONÓMICO')
+  section(ws1, '  ' + t('rep.economic'))
   const er = ws1.addRow(['Concepto', 'Importe'])
   styleHeaderRow(er, C.amberDark)
-  kv(ws1, 'Mantenimiento', +totalMaintCost.toFixed(2), { align: 'right', numFmt: '#,##0.00 €', color: C.blue, bold: true })
-  kv(ws1, 'Combustible', +totalFuelCost.toFixed(2), { align: 'right', numFmt: '#,##0.00 €', color: C.green, bold: true })
-  kv(ws1, 'TOTAL GASTADO', +grandTotal.toFixed(2), { align: 'right', numFmt: '#,##0.00 €', bold: true, fillBg: C.amberLight })
-  kv(ws1, 'Coste por kilómetro', +costPerKm.toFixed(3), { align: 'right', numFmt: '#,##0.000 €', bold: true })
+  kv(ws1, t('common.maintenance'), +totalMaintCost.toFixed(2), { align: 'right', numFmt: '#,##0.00 €', color: C.blue, bold: true })
+  kv(ws1, t('common.fuel'), +totalFuelCost.toFixed(2), { align: 'right', numFmt: '#,##0.00 €', color: C.green, bold: true })
+  kv(ws1, t('rep.totalSpent'), +grandTotal.toFixed(2), { align: 'right', numFmt: '#,##0.00 €', bold: true, fillBg: C.amberLight })
+  kv(ws1, t('rep.costPerKm'), +costPerKm.toFixed(3), { align: 'right', numFmt: '#,##0.000 €', bold: true })
 
   ws1.addRow([])
-  section(ws1, '  COMBUSTIBLE')
-  kv(ws1, 'Repostajes totales', fuelLogs.length, { align: 'right' })
-  kv(ws1, 'Litros totales', +totalLiters.toFixed(2), { align: 'right', numFmt: '#,##0.00 "L"' })
-  kv(ws1, 'Precio medio', +avgPrice.toFixed(3), { align: 'right', numFmt: '#,##0.000 "€/L"' })
-  kv(ws1, 'Consumo medio', avgConsumption || 'Sin datos', { align: 'right', numFmt: avgConsumption ? '#,##0.00 "L/100km"' : undefined, color: C.blue, bold: true })
+  section(ws1, '  ' + t('rep.fuelCaps'))
+  kv(ws1, t('rep.refuelCount'), fuelLogs.length, { align: 'right' })
+  kv(ws1, t('rep.totalLitres'), +totalLiters.toFixed(2), { align: 'right', numFmt: '#,##0.00 "L"' })
+  kv(ws1, t('rep.avgPriceCol'), +avgPrice.toFixed(3), { align: 'right', numFmt: '#,##0.000 "€/L"' })
+  kv(ws1, t('fuelt.avgConsum'), avgConsumption || t('common.noData'), { align: 'right', numFmt: avgConsumption ? '#,##0.00 "L/100km"' : undefined, color: C.blue, bold: true })
 
   ws1.addRow([])
-  section(ws1, '  ESTADO DE MANTENIMIENTOS')
-  kv(ws1, 'Al día', okCount, { align: 'right', color: C.green, bold: true, fillBg: C.greenLight })
-  kv(ws1, 'Próximos', warnCount, { align: 'right', color: C.yellow, bold: true, fillBg: C.yellowLight })
-  kv(ws1, 'Vencidos', overdueCount, { align: 'right', color: C.red, bold: true, fillBg: C.redLight })
+  section(ws1, '  ' + t('rep.maintState'))
+  kv(ws1, t('adm.upToDate'), okCount, { align: 'right', color: C.green, bold: true, fillBg: C.greenLight })
+  kv(ws1, t('rep.upcoming'), warnCount, { align: 'right', color: C.yellow, bold: true, fillBg: C.yellowLight })
+  kv(ws1, t('adm.overdue'), overdueCount, { align: 'right', color: C.red, bold: true, fillBg: C.redLight })
   kv(ws1, 'Total registros', maintenance.length, { align: 'right' })
 
   ws1.addRow([])
   section(ws1, '  ITV')
-  let itvLabel = 'Sin registros'
+  let itvLabel = t('rep.noRecords')
   const latestItv = itvRecords[0]
   if (latestItv) {
-    if (latestItv.result === 'negativa') itvLabel = 'NEGATIVA — No apta'
-    else if (latestItv.result === 'desfavorable' && !latestItv.resolved) itvLabel = 'DESFAVORABLE — Pendiente'
+    if (latestItv.result === 'negativa') itvLabel = t('rep.itvFailed')
+    else if (latestItv.result === 'desfavorable' && !latestItv.resolved) itvLabel = t('rep.itvPending')
     else if (latestItv.expiry_date) {
       const days = Math.floor((new Date(latestItv.expiry_date) - new Date()) / 86400000)
-      if (days < 0) itvLabel = `CADUCADA hace ${Math.abs(days)} días`
-      else if (days <= 30) itvLabel = `Caduca en ${days} días`
-      else itvLabel = `Válida hasta ${formatDate(latestItv.expiry_date)}`
+      if (days < 0) itvLabel = t('rep.itvExpiredCaps', { n: Math.abs(days) })
+      else if (days <= 30) itvLabel = t('rep.expiresIn', { n: days })
+      else itvLabel = t('rep.validUntil', { date: formatDate(latestItv.expiry_date) })
     } else itvLabel = 'Favorable'
   }
-  kv(ws1, 'Estado actual', itvLabel)
+  kv(ws1, t('rep.currentState'), itvLabel)
   kv(ws1, 'Registros totales', itvRecords.length, { align: 'right' })
 
   if (todos.length > 0) {
     ws1.addRow([])
-    section(ws1, '  TAREAS')
+    section(ws1, '  ' + t('rep.tasksCaps'))
     const pend = todos.filter(t => !t.completed).length
-    kv(ws1, 'Pendientes', pend, { align: 'right', color: pend > 0 ? C.red : C.green, bold: true })
-    kv(ws1, 'Completadas', todos.filter(t => t.completed).length, { align: 'right' })
+    kv(ws1, t('rep.pending'), pend, { align: 'right', color: pend > 0 ? C.red : C.green, bold: true })
+    kv(ws1, t('rep.completed'), todos.filter(t => t.completed).length, { align: 'right' })
   }
 
   // ════════════ SHEET 2: MANTENIMIENTOS ════════════
-  const ws2 = wb.addWorksheet('Mantenimientos', { views: [{ showGridLines: false }] })
+  const ws2 = wb.addWorksheet(t('rep.maintCaps'), { views: [{ showGridLines: false }] })
   ws2.columns = [{ width: 30 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 12 }, { width: 30 }]
-  addTitle(ws2, 'MANTENIMIENTOS', C.blue, 8)
+  addTitle(ws2, t('rep.maintCaps'), C.blue, 8)
   ws2.addRow([])
-  const m2h = ws2.addRow(['Elemento', 'Estado', 'Último km', 'Fecha último', 'Próximo km', 'Fecha próximo', 'Coste (€)', 'Notas'])
+  const m2h = ws2.addRow([t('car.element'), t('common.state'), t('rep.lastKm'), t('rep.lastDate'), t('rep.nextKm'), t('rep.nextDate'), t('rep.costEur'), t('common.notes')])
   styleHeaderRow(m2h, C.blue)
 
   getMaintenanceForVehicle(car.vehicle_type, car.fuel).forEach((mt, idx) => {
     const m = maintenance.find(x => x.type_id === mt.id)
     const status = m ? getMaintStatus(m, car.current_km) : null
-    const statusText = !m ? '—' : status === 'ok' ? 'AL DÍA' : status === 'warn' ? 'PRÓXIMO' : 'VENCIDO'
+    const statusText = !m ? '—' : status === 'ok' ? t('status.ok') : status === 'warn' ? t('status.warn') : t('status.overdue')
     const row = ws2.addRow([
       mt.name, statusText,
       m && m.last_km ? m.last_km : '', m && m.last_date ? formatDate(m.last_date) : '',
@@ -245,11 +246,11 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
 
   // ════════════ SHEET 3: REPOSTAJES ════════════
   if (fuelLogs.length > 0) {
-    const ws3 = wb.addWorksheet('Repostajes', { views: [{ showGridLines: false }] })
+    const ws3 = wb.addWorksheet(t('fuelt.title'), { views: [{ showGridLines: false }] })
     ws3.columns = [{ width: 14 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 14 }, { width: 10 }, { width: 12 }, { width: 30 }]
-    addTitle(ws3, 'REPOSTAJES Y CONSUMO', C.green, 8)
+    addTitle(ws3, t('rep.fuel'), C.green, 8)
     ws3.addRow([])
-    const h3 = ws3.addRow(['Fecha', 'Kilómetros', 'Litros', 'Precio €/L', 'Total €', 'Lleno', 'Modo', 'Notas'])
+    const h3 = ws3.addRow([t('common.date'), t('car.tabKm'), t('fuelt.litres'), t('rep.priceCol'), 'Total €', t('fuelt.fullTankQ'), t('rep.mode'), t('common.notes')])
     styleHeaderRow(h3, C.green)
 
     const sortedFuel = [...fuelLogs].sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -257,7 +258,7 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
       const row = ws3.addRow([
         formatDate(l.date), l.km || 0, +(+l.liters).toFixed(2),
         +(+l.price_liter).toFixed(3), +(+l.total_cost).toFixed(2),
-        l.full_tank ? 'Sí' : 'No', l.driving_mode || 'ciudad', l.notes || '',
+        l.full_tank ? t('common.yes') : t('common.no'), driveLabel(l.driving_mode || 'ciudad'), l.notes || '',
       ])
       const alt = idx % 2 === 1
       row.eachCell((cell, col) => {
@@ -285,7 +286,7 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
     })
 
     ws3.addRow([])
-    const cr = ws3.addRow(['Consumo medio', avgConsumption || 'Sin datos'])
+    const cr = ws3.addRow([t('fuelt.avgConsum'), avgConsumption || t('common.noData')])
     cr.getCell(1).font = { name: 'Calibri', size: 11, bold: true, color: { argb: C.muted } }
     const cc = cr.getCell(2)
     cc.font = { name: 'Calibri', size: 12, bold: true, color: { argb: C.blue } }
@@ -296,9 +297,9 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
   if (itvRecords.length > 0) {
     const wsI = wb.addWorksheet('ITV', { views: [{ showGridLines: false }] })
     wsI.columns = [{ width: 16 }, { width: 16 }, { width: 16 }, { width: 22 }, { width: 32 }, { width: 10 }, { width: 12 }, { width: 30 }]
-    addTitle(wsI, 'HISTORIAL ITV', C.purple, 8)
+    addTitle(wsI, t('rep.itvHistory'), C.purple, 8)
     wsI.addRow([])
-    const hI = wsI.addRow(['Inspección', 'Caducidad', 'Resultado', 'Estación', 'Defectos', 'Reparado', 'Coste €', 'Notas'])
+    const hI = wsI.addRow([t('itv.inspectionDate'), t('itv.expiryDate'), t('rep.result'), t('rep.station'), t('rep.defects'), t('rep.repaired'), t('rep.costEur'), t('common.notes')])
     styleHeaderRow(hI, C.purple)
 
     itvRecords.forEach((rec, idx) => {
@@ -306,7 +307,7 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
       const row = wsI.addRow([
         formatDate(rec.inspection_date), rec.expiry_date ? formatDate(rec.expiry_date) : '',
         resultUpper, rec.station || '', rec.defects || '',
-        rec.resolved ? 'Sí' : (rec.result === 'desfavorable' ? 'No' : ''),
+        rec.resolved ? t('common.yes') : (rec.result === 'desfavorable' ? t('common.no') : ''),
         rec.cost ? +(+rec.cost).toFixed(2) : '', rec.notes || '',
       ])
       const alt = idx % 2 === 1
@@ -327,11 +328,11 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
 
   // ════════════ SHEET: RECAMBIOS ════════════
   if (parts.length > 0) {
-    const wsP = wb.addWorksheet('Recambios', { views: [{ showGridLines: false }] })
+    const wsP = wb.addWorksheet(t('car.tabParts'), { views: [{ showGridLines: false }] })
     wsP.columns = [{ width: 32 }, { width: 25 }, { width: 55 }]
-    addTitle(wsP, 'RECAMBIOS', C.blue, 3)
+    addTitle(wsP, t('rep.partsCaps'), C.blue, 3)
     wsP.addRow([])
-    const hP = wsP.addRow(['Nombre', 'Referencia', 'Enlace'])
+    const hP = wsP.addRow([t('common.name'), t('common.reference'), t('common.link')])
     styleHeaderRow(hP, C.blue)
     parts.forEach((p, idx) => {
       const row = wsP.addRow([p.name, p.reference || '', p.url || ''])
@@ -353,11 +354,11 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
 
   // ════════════ SHEET: KILÓMETROS ════════════
   if (kmLogs.length > 0) {
-    const wsK = wb.addWorksheet('Kilómetros', { views: [{ showGridLines: false }] })
+    const wsK = wb.addWorksheet(t('car.tabKm'), { views: [{ showGridLines: false }] })
     wsK.columns = [{ width: 16 }, { width: 16 }, { width: 50 }]
-    addTitle(wsK, 'HISTORIAL DE KILÓMETROS', C.amber, 3)
+    addTitle(wsK, t('rep.kmHistory'), C.amber, 3)
     wsK.addRow([])
-    const hK = wsK.addRow(['Fecha', 'Kilómetros', 'Notas'])
+    const hK = wsK.addRow([t('common.date'), t('car.tabKm'), t('common.notes')])
     styleHeaderRow(hK, C.amberDark)
     kmLogs.forEach((l, idx) => {
       const row = wsK.addRow([formatDate(l.date), l.km || 0, l.notes || ''])
@@ -375,16 +376,16 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
 
   // ════════════ SHEET: TAREAS ════════════
   if (todos.length > 0) {
-    const wsT = wb.addWorksheet('Tareas', { views: [{ showGridLines: false }] })
+    const wsT = wb.addWorksheet(t('car.tabTodos'), { views: [{ showGridLines: false }] })
     wsT.columns = [{ width: 13 }, { width: 12 }, { width: 35 }, { width: 30 }, { width: 14 }, { width: 14 }]
-    addTitle(wsT, 'TAREAS', C.red, 6)
+    addTitle(wsT, t('rep.tasksCaps'), C.red, 6)
     wsT.addRow([])
-    const hT = wsT.addRow(['Estado', 'Prioridad', 'Título', 'Notas', 'Creado', 'Completado'])
+    const hT = wsT.addRow([t('common.state'), t('rep.priority'), t('rep.titleCol'), t('common.notes'), 'Creado', t('rep.doneCol')])
     styleHeaderRow(hT, C.red)
     todos.forEach((t, idx) => {
       const prio = (t.priority || 'media').toUpperCase()
       const row = wsT.addRow([
-        t.completed ? 'Completada' : 'Pendiente', prio, t.title, t.notes || '',
+        t.completed ? t('rep.completed') : t('rep.pending'), prio, t.title, t.notes || '',
         t.created_at ? formatDate(t.created_at.split('T')[0]) : '',
         t.completed_at ? formatDate(t.completed_at.split('T')[0]) : '',
       ])

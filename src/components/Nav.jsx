@@ -117,7 +117,7 @@ export default function Nav({ user, view, setView, onLogout, dataVersion, onTogg
       background: theme.card, borderBottom: `1px solid ${theme.border}`,
       position: 'sticky', top: 0, zIndex: 100,
     }}>
-      <div style={{ ...css.container, ...css.flexBetween, height: 54, gap: 14, maxWidth: 1120 }}>
+      <div style={{ ...css.container, ...css.flexBetween, height: 54, gap: 14 }}>
         <Brand />
 
         <div style={{ display: 'flex', alignItems: 'stretch', height: '100%', flex: 1, marginLeft: 8 }}>

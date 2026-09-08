@@ -77,7 +77,7 @@ export async function savePrefs(user, prefs, { markOnboarded = false } = {}) {
     const updated = await updateProfile(user.id, patch)
     return { ok: true, user: updated }
   } catch (err) {
-    console.warn('No se pudieron guardar las preferencias en la base de datos:', err.message)
+    console.warn('[prefs] could not save to the database:', err.message)
     return { ok: false, error: err, user: { ...user, ...patch } }
   }
 }

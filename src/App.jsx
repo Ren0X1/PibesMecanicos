@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect } from 'react'
 import { theme, css, getThemeMode, setThemeMode, onThemeChange } from './lib/theme.js'
 import { useIsMobile } from './lib/useIsMobile.js'
 import { updateProfile, getDemoUser } from './lib/api.js'
-import { isDemo, onDemoChange } from './lib/demo/mode.js'
-import { t, useLang } from './lib/i18n.js'
+import { isDemo, onDemoChange, exitDemo } from './lib/demo/mode.js'
+import { t, useLang, onLangChange } from './lib/i18n.js'
 import { needsOnboarding, adoptProfilePrefs } from './lib/prefs.js'
 import { Onboarding, SettingsModal } from './components/Preferences.jsx'
 import { Toast, Modal, Field } from './components/ui.jsx'
@@ -12,6 +12,7 @@ import Nav from './components/Nav.jsx'
 import DemoBanner from './components/DemoBanner.jsx'
 import SwipeArea from './components/SwipeArea.jsx'
 import SwipeHint from './components/SwipeHint.jsx'
+import Footer from './components/Footer.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import AdminPanel from './components/AdminPanel.jsx'
 import Workshops from './components/Workshops.jsx'
@@ -26,8 +27,8 @@ function PinChangeModal({ user, onDone }) {
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
-    if (pin.length < 4) return setError('El PIN debe tener al menos 4 dígitos')
-    if (pin !== confirm) return setError('Los PIN no coinciden')
+    if (pin.length < 4) return setError(t('pin.errShort'))
+    if (pin !== confirm) return setError(t('pin.errMatch'))
     setSaving(true)
     try {
       await updateProfile(user.id, { pin, pin_change_required: false })
@@ -38,26 +39,29 @@ function PinChangeModal({ user, onDone }) {
 
   return (
     <div style={{
-      minHeight: '100vh', minHeight: '100dvh', background: theme.bg,
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      minHeight: '100dvh', background: theme.bg,
+      display: 'flex', flexDirection: 'column',
     }}>
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}>
       <div style={{ width: '100%', maxWidth: 380 }}>
         <div style={{ borderTop: `2px solid ${theme.rule}`, paddingTop: 20 }}>
-          <h2 style={{ ...css.h1, marginBottom: 8 }}>Cambiar PIN</h2>
+          <h2 style={{ ...css.h1, marginBottom: 8 }}>{t('pin.title')}</h2>
           <p style={{ ...css.lbl, textTransform: 'none', letterSpacing: '0.02em', fontSize: 12.5, marginBottom: 22 }}>
-            Es tu primer inicio de sesión. Por seguridad, elige un PIN nuevo.
+            {t('pin.intro')}
           </p>
-          <Field label="Nuevo PIN">
+          <Field label={t('pin.new')}>
             <input style={{ ...css.input, ...css.num, letterSpacing: '0.3em' }}
               inputMode="numeric" pattern="[0-9]*" type="password" value={pin}
               onChange={e => { setPin(e.target.value.replace(/[^\d]/g, '')); setError('') }}
-              placeholder="Mínimo 4 dígitos" />
+              placeholder={t('pin.min')} />
           </Field>
-          <Field label="Confirmar PIN">
+          <Field label={t('pin.confirm')}>
             <input style={{ ...css.input, ...css.num, letterSpacing: '0.3em' }}
               inputMode="numeric" pattern="[0-9]*" type="password" value={confirm}
               onChange={e => { setConfirm(e.target.value.replace(/[^\d]/g, '')); setError('') }}
-              placeholder="Repite el PIN"
+              placeholder={t('pin.repeat')}
               onKeyDown={e => e.key === 'Enter' && handleSave()} />
           </Field>
           {error && (
@@ -70,9 +74,11 @@ function PinChangeModal({ user, onDone }) {
           <button onClick={handleSave} disabled={saving} style={{
             ...css.btn(), width: '100%', justifyContent: 'center', padding: '13px 16px', fontSize: 11,
             opacity: saving ? 0.7 : 1,
-          }}>{saving ? 'Guardando' : 'Guardar PIN'}</button>
+          }}>{saving ? t('common.saving') : t('pin.saveBtn')}</button>
         </div>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }
@@ -95,6 +101,12 @@ export default function App() {
   /* El tema y el acento viven fuera de React: hay que repintar a mano. */
   useEffect(() => onThemeChange(() => setThemeKey(k => k + 1)), [])
 
+  /* En la demo, cambiar de idioma regenera los datos de ejemplo, así
+     que hay que volver a montar las vistas para que los recarguen. */
+  useEffect(() => onLangChange(() => {
+    if (isDemo()) { setCurrentUser(getDemoUser()); setResetKey(k => k + 1) }
+  }), [])
+
   /* Lo que diga el perfil manda sobre lo guardado en el navegador. */
   useEffect(() => { adoptProfilePrefs(currentUser) }, [currentUser?.id])
 
@@ -114,6 +126,10 @@ export default function App() {
   }
 
   const handleLogout = () => {
+    /* En la demo no hay sesión que cerrar: «salir» significa salir
+       de la demo. Si no, se quedaría en /demo sin usuario, que es un
+       estado que no lleva a ninguna parte. */
+    if (isDemo()) { exitDemo(); return }
     setCurrentUser(null); setView('dashboard')
     try { sessionStorage.removeItem('pm_user') } catch {}
   }
@@ -153,7 +169,8 @@ export default function App() {
 
   return (
     <div key={themeKey} style={{
-      minHeight: '100vh', background: theme.bg, color: theme.text, fontSize: 14,
+      minHeight: '100dvh', background: theme.bg, color: theme.text, fontSize: 14,
+      display: 'flex', flexDirection: 'column',
       paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0) + 72px)' : 0,
     }}>
       {demo && (
@@ -167,8 +184,9 @@ export default function App() {
       <Nav user={currentUser} view={view} setView={setView} onLogout={handleLogout}
         dataVersion={dataVersion} onToggleTheme={toggleTheme}
         onOpenSettings={() => setShowSettings(true)} />
-      <SwipeArea index={viewIndex} count={views.length} onChange={i => setView(views[i])}>
-        <div key={resetKey}>
+      <SwipeArea index={viewIndex} count={views.length} onChange={i => setView(views[i])}
+        style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div key={resetKey} style={{ flex: 1 }}>
           {view === 'dashboard' && <Dashboard user={currentUser} onToast={onToast} />}
           {view === 'stats' && <UserStats user={currentUser} onToast={onToast} />}
           {view === 'reminders' && <Reminders user={currentUser} onToast={onToast} />}
@@ -177,6 +195,7 @@ export default function App() {
           {view === 'admin' && currentUser.role === 'admin' && <AdminPanel onToast={onToast} />}
         </div>
       </SwipeArea>
+      <Footer />
       <SwipeHint />
       <SettingsModal
         open={showSettings}

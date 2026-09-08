@@ -3,11 +3,14 @@ import { CheckSquare, Square, Plus, Trash2, Save, Edit2, ChevronDown, ChevronRig
 import { theme, css } from '../lib/theme.js'
 import { createVehicleTodo, updateVehicleTodo, deleteVehicleTodo } from '../lib/api.js'
 import { Modal, Field } from './ui.jsx'
+import { t, useLang } from '../lib/i18n.js'
 
+/* El valor viaja a la base de datos; la etiqueta se resuelve al
+   pintar para que siga al idioma sin recargar. */
 const PRIORITIES = [
-  { value: 'baja', label: 'Baja', color: theme.green },
-  { value: 'media', label: 'Media', color: theme.yellow },
-  { value: 'alta', label: 'Alta', color: theme.red },
+  { value: 'baja', get label() { return t('todo.low') }, get color() { return theme.green } },
+  { value: 'media', get label() { return t('todo.medium') }, get color() { return theme.yellow } },
+  { value: 'alta', get label() { return t('todo.high') }, get color() { return theme.red } },
 ]
 
 function getPriorityColor(p) {
@@ -15,7 +18,7 @@ function getPriorityColor(p) {
 }
 
 function getPriorityLabel(p) {
-  return PRIORITIES.find(x => x.value === p)?.label || 'Media'
+  return PRIORITIES.find(x => x.value === p)?.label || t('todo.medium')
 }
 
 function TodoFormModal({ open, onClose, onSave, initial }) {
@@ -37,19 +40,19 @@ function TodoFormModal({ open, onClose, onSave, initial }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={initial ? 'Editar tarea' : 'Nueva tarea'}>
-      <Field label="Tarea">
+    <Modal open={open} onClose={onClose} title={initial ? t('todo.edit') : t('todo.new')}>
+      <Field label={t('todo.title')}>
         <input style={css.input} value={form.title} onChange={e => set('title', e.target.value)}
-          placeholder="Ej: Cambiar las pastillas delanteras"
+          placeholder={t('todo.taskPh')}
           autoFocus
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSave()} />
       </Field>
-      <Field label="Notas">
+      <Field label={t('common.notes')}>
         <textarea style={{ ...css.input, minHeight: 70, resize: 'vertical', fontFamily: 'inherit' }}
           value={form.notes} onChange={e => set('notes', e.target.value)}
-          placeholder="Detalles, referencias, dónde comprarlas..." />
+          placeholder={t('todo.notesPh')} />
       </Field>
-      <Field label="Prioridad">
+      <Field label={t('todo.priority')}>
         <div style={{ display: 'flex', gap: 6 }}>
           {PRIORITIES.map(p => (
             <button key={p.value} type="button" onClick={() => set('priority', p.value)} style={{
@@ -62,9 +65,9 @@ function TodoFormModal({ open, onClose, onSave, initial }) {
         </div>
       </Field>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 12, gap: 8 }}>
-        <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
+        <button onClick={onClose} style={css.btnOutline}>{t('common.cancel')}</button>
         <button onClick={handleSave} disabled={saving || !form.title.trim()} style={css.btn()}>
-          <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
+          <Save size={14} /> {saving ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </Modal>
@@ -132,22 +135,22 @@ export default function TodoTab({ carId, todos, onReload, onToast, isMobile }) {
     try {
       await createVehicleTodo({ car_id: carId, title: quickAdd.trim(), priority: 'media' })
       setQuickAdd('')
-      onToast('Tarea añadida')
+      onToast(t('todo.added'))
       onReload()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleSave = async (form) => {
     try {
       if (editTodo) {
         await updateVehicleTodo(editTodo.id, { title: form.title, notes: form.notes, priority: form.priority })
-        onToast('Tarea actualizada')
+        onToast(t('common.updated'))
       } else {
         await createVehicleTodo({ car_id: carId, ...form })
-        onToast('Tarea creada')
+        onToast(t('common.created'))
       }
       setShowForm(false); setEditTodo(null); onReload()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleToggle = async (todo) => {
@@ -156,18 +159,18 @@ export default function TodoTab({ carId, todos, onReload, onToast, isMobile }) {
         completed: !todo.completed,
         completed_at: !todo.completed ? new Date().toISOString() : null,
       })
-      onToast(todo.completed ? 'Tarea reabierta' : 'Tarea completada ✓')
+      onToast(todo.completed ? t('todo.reopened') : t('todo.doneMsg'))
       onReload()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleDelete = async (todo) => {
-    if (!confirm(`¿Eliminar la tarea "${todo.title}"?`)) return
+    if (!confirm(t('todo.confirm', { title: todo.title }))) return
     try {
       await deleteVehicleTodo(todo.id)
-      onToast('Tarea eliminada')
+      onToast(t('common.deleted'))
       onReload()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   // Sort: pending by priority (alta > media > baja), then completed at bottom
@@ -185,14 +188,14 @@ export default function TodoTab({ carId, todos, onReload, onToast, isMobile }) {
       <div style={{ ...css.card, padding: isMobile ? 10 : 14, marginBottom: 12, display: 'flex', gap: 8 }}>
         <input style={{ ...css.input, flex: 1 }}
           value={quickAdd} onChange={e => setQuickAdd(e.target.value)}
-          placeholder="Añadir tarea rápida..."
+          placeholder={t('todo.quickAdd')}
           onKeyDown={e => e.key === 'Enter' && handleQuickAdd()} />
         <button onClick={handleQuickAdd} disabled={!quickAdd.trim()}
           style={{ ...css.btn(), padding: '8px 14px', opacity: !quickAdd.trim() ? 0.5 : 1 }}>
           <Plus size={16} />
         </button>
         <button onClick={() => { setEditTodo(null); setShowForm(true) }}
-          style={css.btnOutline} title="Tarea con detalles">
+          style={css.btnOutline} title={t('todo.detailed')}>
           <Edit2 size={14} />
         </button>
       </div>
@@ -201,9 +204,9 @@ export default function TodoTab({ carId, todos, onReload, onToast, isMobile }) {
       {todos.length === 0 && (
         <div style={{ ...css.card, padding: 40, textAlign: 'center' }}>
           <CheckSquare size={36} color={theme.mutedLight} style={{ marginBottom: 10 }} />
-          <p style={{ color: theme.muted, fontSize: 13 }}>Sin tareas pendientes</p>
+          <p style={css.lbl}>{t('todo.empty')}</p>
           <p style={{ color: theme.mutedLight, fontSize: 12, marginTop: 4 }}>
-            Añade cosas que tengas que hacer al vehículo
+            {t('todo.help')}
           </p>
         </div>
       )}
@@ -212,7 +215,7 @@ export default function TodoTab({ carId, todos, onReload, onToast, isMobile }) {
       {pending.length > 0 && (
         <div style={{ ...css.card, padding: 0, overflow: 'hidden', marginBottom: 12 }}>
           <div style={{ ...css.flexBetween, padding: isMobile ? '12px 14px' : '14px 18px', borderBottom: `1px solid ${theme.border}` }}>
-            <h3 style={css.h3}>📋 Pendientes ({pending.length})</h3>
+            <h3 style={css.h3}>{t('common.pending')} ({pending.length})</h3>
           </div>
           {pending.map(t => (
             <TodoRow key={t.id} todo={t} onToggle={handleToggle} onEdit={(t) => { setEditTodo(t); setShowForm(true) }} onDelete={handleDelete} isMobile={isMobile} />
@@ -230,7 +233,7 @@ export default function TodoTab({ carId, todos, onReload, onToast, isMobile }) {
             color: theme.muted, fontFamily: 'inherit',
           }}>
             {showCompleted ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <span style={{ fontWeight: 600, fontSize: 14 }}>✓ Completadas ({completed.length})</span>
+            <span style={{ ...css.lbl, color: theme.text }}>{t('common.completed')} ({completed.length})</span>
           </button>
           {showCompleted && completed.map(t => (
             <TodoRow key={t.id} todo={t} onToggle={handleToggle} onEdit={() => {}} onDelete={handleDelete} isMobile={isMobile} />

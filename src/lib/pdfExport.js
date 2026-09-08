@@ -1,3 +1,4 @@
+import { t, getLocale, fmtNum } from './i18n.js'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { MAINT_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle } from './constants.js'
@@ -25,15 +26,15 @@ function calcAvgConsumption(fuelLogs) {
 }
 
 function getItvStatus(itv) {
-  if (!itv || itv.length === 0) return { label: 'Sin registros', color: C.muted }
+  if (!itv || itv.length === 0) return { label: t('rep.noRecords'), color: C.muted }
   const latest = itv[0]
-  if (latest.result === 'negativa') return { label: 'No apta — Negativa', color: C.red }
-  if (latest.result === 'desfavorable' && !latest.resolved) return { label: 'Pendiente reparar', color: C.yellow }
+  if (latest.result === 'negativa') return { label: t('itv.notRoadworthy'), color: C.red }
+  if (latest.result === 'desfavorable' && !latest.resolved) return { label: t('itv.pendingFix'), color: C.yellow }
   if (latest.expiry_date) {
     const days = Math.floor((new Date(latest.expiry_date) - new Date()) / 86400000)
-    if (days < 0) return { label: `Caducada hace ${Math.abs(days)} días`, color: C.red }
-    if (days <= 30) return { label: `Caduca en ${days} días`, color: C.yellow }
-    return { label: `Válida hasta ${formatDate(latest.expiry_date)}`, color: C.green }
+    if (days < 0) return { label: t('rep.expiredAgo', { n: Math.abs(days) }), color: C.red }
+    if (days <= 30) return { label: t('rep.expiresIn', { n: days }), color: C.yellow }
+    return { label: t('rep.validUntil', { date: formatDate(latest.expiry_date) }), color: C.green }
   }
   return { label: 'Favorable', color: C.green }
 }
@@ -56,7 +57,7 @@ function drawFooter(doc, page, totalPages) {
   doc.line(14, 285, 196, 285)
   doc.setFontSize(8)
   doc.setTextColor(...C.muted)
-  doc.text(`Generado el ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}`, 14, 291)
+  doc.text(t('rep.generatedOn', { date: new Date().toLocaleDateString(getLocale(), { day: '2-digit', month: 'long', year: 'numeric' }) }), 14, 291)
   doc.text(`Pagina ${page} de ${totalPages}`, 196, 291, { align: 'right' })
 }
 
@@ -102,7 +103,7 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
   doc.setTextColor(...C.muted)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
-  doc.text('INFORME DE VEHICULO', 14, y)
+  doc.text(t('rep.vehicleReport'), 14, y)
 
   y += 10
   doc.setTextColor(...C.text)
@@ -114,7 +115,7 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(...C.muted)
-  const vTypeName = car.vehicle_type === 'moto' ? 'Moto' : 'Coche'
+  const vTypeName = car.vehicle_type === 'moto' ? t('veh.moto') : t('veh.coche')
   doc.text(`${vTypeName} - ${car.plate} - ${car.year} - ${car.fuel} - ${car.transmission}`, 14, y)
   if (car.notes) {
     y += 5
@@ -129,10 +130,10 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
   const itvStatus = getItvStatus(itvRecords)
 
   const boxW = 44, boxH = 26, gap = 4
-  kpiBox(doc, 14, y, boxW, boxH, 'Km Actuales', `${(car.current_km || 0).toLocaleString()}`, C.blue, 'kilometros')
-  kpiBox(doc, 14 + (boxW + gap), y, boxW, boxH, 'Gasto Total', `${grandTotal.toFixed(0)} EUR`, C.accent, 'mant+comb')
-  kpiBox(doc, 14 + 2 * (boxW + gap), y, boxW, boxH, 'Combustible', `${totalFuelCost.toFixed(0)} EUR`, C.green, avgConsumption ? `${avgConsumption} L/100` : 'sin datos')
-  kpiBox(doc, 14 + 3 * (boxW + gap), y, boxW, boxH, 'Mantenimiento', `${totalMaintCost.toFixed(0)} EUR`, C.purple, `${maintenance.length} reg.`)
+  kpiBox(doc, 14, y, boxW, boxH, t('rep.currentKmBox'), fmtNum(car.current_km || 0), C.blue, t('rep.kmUnit'))
+  kpiBox(doc, 14 + (boxW + gap), y, boxW, boxH, t('rep.totalSpend'), `${grandTotal.toFixed(0)} EUR`, C.accent, 'mant+comb')
+  kpiBox(doc, 14 + 2 * (boxW + gap), y, boxW, boxH, t('common.fuel'), `${totalFuelCost.toFixed(0)} EUR`, C.green, avgConsumption ? `${avgConsumption} L/100` : t('rep.noData'))
+  kpiBox(doc, 14 + 3 * (boxW + gap), y, boxW, boxH, t('common.maintenance'), `${totalMaintCost.toFixed(0)} EUR`, C.purple, `${maintenance.length} reg.`)
   y += boxH + 12
 
   // Status counters
@@ -144,7 +145,7 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
     else if (s === 'overdue') overdueCount++
   })
 
-  y = sectionTitle(doc, y, 'ESTADO GENERAL', C.accent)
+  y = sectionTitle(doc, y, t('rep.overall'), C.accent)
 
   function statusBox(x, y, label, count, color, soft) {
     const w = 58, h = 22
@@ -161,16 +162,16 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
     doc.setTextColor(...C.muted)
     doc.text(label, x + 22, y + 11)
     doc.setFontSize(7)
-    const desc = label === 'AL DIA' ? 'Mantenimientos OK' : label === 'PROXIMOS' ? 'Revision pronto' : 'Accion urgente'
+    const desc = color === C.green ? t('rep.maintOk') : color === C.yellow ? t('rep.checkSoon') : t('rep.urgent')
     doc.text(desc, x + 22, y + 16)
   }
   statusBox(14, y, 'AL DIA', okCount, C.green, C.greenSoft)
   statusBox(14 + 63, y, 'PROXIMOS', warnCount, C.yellow, C.yellowSoft)
-  statusBox(14 + 126, y, 'VENCIDOS', overdueCount, C.red, C.redSoft)
+  statusBox(14 + 126, y, t('rep.overdueCaps'), overdueCount, C.red, C.redSoft)
   y += 30
 
   // ITV
-  y = sectionTitle(doc, y, 'INSPECCION TECNICA (ITV)', C.purple)
+  y = sectionTitle(doc, y, t('rep.itvSection'), C.purple)
   doc.setFillColor(...C.lighter)
   doc.setDrawColor(...C.border)
   doc.roundedRect(14, y, 182, 18, 2, 2, 'FD')
@@ -184,19 +185,19 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
   doc.setFontSize(9)
   doc.setTextColor(...C.muted)
   if (itvRecords.length > 0) {
-    doc.text(`Total registros: ${itvRecords.length} | Ultima inspeccion: ${formatDate(itvRecords[0].inspection_date)}`, 20, y + 14)
+    doc.text(t('rep.itvCount', { n: itvRecords.length, date: formatDate(itvRecords[0].inspection_date) }), 20, y + 14)
   } else {
-    doc.text(`Sin inspecciones registradas`, 20, y + 14)
+    doc.text(t('rep.noInspections'), 20, y + 14)
   }
   y += 26
 
   // Pending todos
   const pendingTodos = todos.filter(t => !t.completed)
   if (pendingTodos.length > 0) {
-    y = sectionTitle(doc, y, 'TAREAS PENDIENTES', C.red)
+    y = sectionTitle(doc, y, t('rep.todos'), C.red)
     doc.setFontSize(9)
     doc.setTextColor(...C.muted)
-    doc.text(`${pendingTodos.length} tareas por hacer en este vehiculo`, 14, y)
+    doc.text(t('rep.pendingCount', { n: pendingTodos.length }), 14, y)
     y += 8
     pendingTodos.slice(0, 5).forEach(t => {
       const color = t.priority === 'alta' ? C.red : t.priority === 'media' ? C.yellow : C.green
@@ -218,12 +219,12 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
   doc.addPage()
   drawHeader(doc, car)
   y = 30
-  y = sectionTitle(doc, y, 'MANTENIMIENTOS DETALLE', C.blue)
+  y = sectionTitle(doc, y, t('rep.maintDetail'), C.blue)
 
   const maintRows = getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
     const m = maintenance.find(x => x.type_id === mt.id)
     const status = m ? getMaintStatus(m, car.current_km) : null
-    const statusText = !m ? 'Sin datos' : status === 'ok' ? 'AL DIA' : status === 'warn' ? 'PROXIMO' : 'VENCIDO'
+    const statusText = !m ? t('common.noData') : status === 'ok' ? t('status.ok') : status === 'warn' ? t('status.warn') : t('status.overdue')
     return [
       mt.name, statusText,
       m ? `${(m.last_km || 0).toLocaleString()} km` : '-',
@@ -236,7 +237,7 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
 
   autoTable(doc, {
     startY: y,
-    head: [['Elemento', 'Estado', 'Ultimo km', 'Fecha ult.', 'Proximo km', 'Fecha prox.', 'Coste']],
+    head: [[t('car.element'), t('common.state'), t('car.lastKm'), t('car.lastDate'), t('car.nextKm'), t('car.nextDate'), t('common.cost')]],
     body: maintRows,
     theme: 'plain',
     headStyles: { fillColor: C.text, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, cellPadding: 4 },
@@ -246,8 +247,8 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
     didParseCell: (data) => {
       if (data.column.index === 1 && data.section === 'body') {
         const val = data.cell.raw
-        if (val === 'VENCIDO') { data.cell.styles.textColor = C.red; data.cell.styles.fillColor = C.redSoft }
-        else if (val === 'PROXIMO') { data.cell.styles.textColor = C.yellow; data.cell.styles.fillColor = C.yellowSoft }
+        if (val === t('status.overdue')) { data.cell.styles.textColor = C.red; data.cell.styles.fillColor = C.redSoft }
+        else if (val === t('status.warn')) { data.cell.styles.textColor = C.yellow; data.cell.styles.fillColor = C.yellowSoft }
         else if (val === 'AL DIA') { data.cell.styles.textColor = C.green; data.cell.styles.fillColor = C.greenSoft }
       }
     },
@@ -259,22 +260,22 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
     doc.addPage()
     drawHeader(doc, car)
     y = 30
-    y = sectionTitle(doc, y, 'REPOSTAJES Y CONSUMO', C.green)
+    y = sectionTitle(doc, y, t('rep.fuel'), C.green)
 
     const totalLiters = fuelLogs.reduce((s, f) => s + +(f.liters || 0), 0)
     const avgPrice = (fuelLogs.reduce((s, f) => s + +(f.price_liter || 0), 0) / fuelLogs.length).toFixed(2)
 
     const fbW = 44, fbH = 22
-    kpiBox(doc, 14, y, fbW, fbH, 'Gasto total', `${totalFuelCost.toFixed(0)} EUR`, C.green)
-    kpiBox(doc, 14 + 48, y, fbW, fbH, 'Litros totales', `${totalLiters.toFixed(0)} L`, C.green)
-    kpiBox(doc, 14 + 96, y, fbW, fbH, 'Precio medio/L', `${avgPrice} EUR`, C.green)
-    kpiBox(doc, 14 + 144, y, fbW, fbH, 'Consumo medio', avgConsumption ? `${avgConsumption}` : '-', C.blue, 'L/100km')
+    kpiBox(doc, 14, y, fbW, fbH, t('rep.totalSpend'), `${totalFuelCost.toFixed(0)} EUR`, C.green)
+    kpiBox(doc, 14 + 48, y, fbW, fbH, t('rep.totalLitres'), `${totalLiters.toFixed(0)} L`, C.green)
+    kpiBox(doc, 14 + 96, y, fbW, fbH, t('rep.avgPrice'), `${avgPrice} EUR`, C.green)
+    kpiBox(doc, 14 + 144, y, fbW, fbH, t('fuelt.avgConsum'), avgConsumption ? `${avgConsumption}` : '-', C.blue, 'L/100km')
     y += fbH + 8
 
     const sortedFuel = [...fuelLogs].sort((a, b) => new Date(b.date) - new Date(a.date))
     autoTable(doc, {
       startY: y,
-      head: [['Fecha', 'Km', 'Litros', 'EUR/L', 'Total', 'Lleno', 'Modo', 'Notas']],
+      head: [[t('common.date'), t('common.km'), t('fuelt.litres'), 'EUR/L', t('common.total'), t('fuelt.fullTankQ'), t('rep.mode'), t('common.notes')]],
       body: sortedFuel.map(l => [
         formatDate(l.date), (l.km || 0).toLocaleString(),
         `${l.liters} L`, `${l.price_liter} EUR`,
@@ -301,7 +302,7 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
 
     autoTable(doc, {
       startY: y,
-      head: [['Inspeccion', 'Caducidad', 'Resultado', 'Estacion', 'Defectos', 'Coste']],
+      head: [[t('itv.inspectionDate'), t('itv.expiryDate'), t('rep.result'), t('rep.station'), t('rep.defects'), t('common.cost')]],
       body: itvRecords.map(r => [
         formatDate(r.inspection_date), formatDate(r.expiry_date),
         (r.result || '').toUpperCase(), r.station || '-',
@@ -330,11 +331,11 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
     y = 30
 
     if (parts.length > 0) {
-      y = sectionTitle(doc, y, 'RECAMBIOS', C.blue)
+      y = sectionTitle(doc, y, t('rep.partsCaps'), C.blue)
       autoTable(doc, {
         startY: y,
-        head: [['Nombre', 'Referencia', 'Enlace']],
-        body: parts.map(p => [p.name, p.reference || '-', p.url ? 'Si (ver app)' : '-']),
+        head: [[t('common.name'), t('common.reference'), t('common.link')]],
+        body: parts.map(p => [p.name, p.reference || '-', p.url ? t('rep.inAppLink') : '-']),
         theme: 'plain',
         headStyles: { fillColor: C.blue, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, cellPadding: 4 },
         bodyStyles: { fontSize: 8, textColor: C.text, cellPadding: 3.5 },
@@ -345,10 +346,10 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
     }
 
     if (kmLogs.length > 0 && y < 240) {
-      y = sectionTitle(doc, y, 'HISTORIAL DE KILOMETROS', C.accent)
+      y = sectionTitle(doc, y, t('rep.kmHistory'), C.accent)
       autoTable(doc, {
         startY: y,
-        head: [['Fecha', 'Kilometros', 'Notas']],
+        head: [[t('common.date'), t('car.tabKm'), t('common.notes')]],
         body: kmLogs.map(l => [formatDate(l.date), `${(l.km || 0).toLocaleString()} km`, l.notes || '-']),
         theme: 'plain',
         headStyles: { fillColor: C.accent, textColor: [0, 0, 0], fontStyle: 'bold', fontSize: 8, cellPadding: 4 },

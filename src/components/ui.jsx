@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { CheckCircle, Clock, AlertTriangle, X } from 'lucide-react'
 import { theme, css, FONT } from '../lib/theme.js'
+import { t } from '../lib/i18n.js'
 
 /* ── Cabecera de sección ──────────────────────────────────────
    Filete grueso arriba, titular en Archivo Black y metadato en
@@ -65,9 +66,9 @@ export function Gauge({ value = 0, color, size = 38, bg }) {
 }
 
 export function StatusBadge({ status }) {
-  if (status === 'ok') return <span style={css.badge(theme.greenSoft, theme.green)}><CheckCircle size={11} /> OK</span>
-  if (status === 'warn') return <span style={css.badge(theme.yellowSoft, theme.yellow)}><Clock size={11} /> Próximo</span>
-  return <span style={css.badge(theme.redSoft, theme.red)}><AlertTriangle size={11} /> Vencido</span>
+  if (status === 'ok') return <span style={css.badge(theme.greenSoft, theme.green)}><CheckCircle size={11} /> {t('status.ok')}</span>
+  if (status === 'warn') return <span style={css.badge(theme.yellowSoft, theme.yellow)}><Clock size={11} /> {t('status.warn')}</span>
+  return <span style={css.badge(theme.redSoft, theme.red)}><AlertTriangle size={11} /> {t('status.overdue')}</span>
 }
 
 export function Modal({ open, onClose, title, children }) {

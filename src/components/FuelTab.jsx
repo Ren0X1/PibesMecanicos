@@ -2,14 +2,17 @@ import { formatDate } from '../lib/constants.js'
 import { useState, useMemo } from 'react'
 import { Fuel, Plus, Trash2, Save, TrendingDown, Gauge, Route } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
+import { t, useLang, fmtNum, fmtMoney } from '../lib/i18n.js'
 import { createFuelLog, deleteFuelLog } from '../lib/api.js'
 import { Modal, Field, Stat, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
 
 const today = new Date().toISOString().split('T')[0]
+/* Getters, no valores: si se resolviera aquí, el texto se quedaría
+   fijado en el idioma que hubiera al cargar el módulo. */
 const MODES = [
-  { value: 'ciudad', label: '🏙️ Población', short: 'Ciudad' },
-  { value: 'mixto', label: '🔀 Mixto', short: 'Mixto' },
-  { value: 'carretera', label: '🛣️ Carretera', short: 'Carretera' },
+  { value: 'ciudad', get label() { return t('drive.ciudad') }, get short() { return t('drive.ciudad') } },
+  { value: 'mixto', get label() { return t('drive.mixto') }, get short() { return t('drive.mixto') } },
+  { value: 'carretera', get label() { return t('drive.carretera') }, get short() { return t('drive.carretera') } },
 ]
 
 function FuelFormModal({ open, onClose, onSave, carKm }) {
@@ -28,28 +31,28 @@ function FuelFormModal({ open, onClose, onSave, carKm }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Nuevo Repostaje">
+    <Modal open={open} onClose={onClose} title={t('fuelt.newTitle')}>
       <ResponsiveGrid2>
-        <Field label="Kilómetros del coche">
+        <Field label={t('fuelt.carKm')}>
           <NumInput value={form.km} onChange={e => set('km', e.target.value)} />
         </Field>
-        <Field label="Fecha">
+        <Field label={t('common.date')}>
           <DateInput value={form.date} onChange={e => set('date', e.target.value)} />
         </Field>
-        <Field label="Litros">
+        <Field label={t('fuelt.litres')}>
           <NumInput step="0.01" decimal value={form.liters} onChange={e => set('liters', e.target.value)} />
         </Field>
-        <Field label="Precio/litro (€)">
+        <Field label={t('fuelt.priceEur')}>
           <NumInput step="0.001" decimal value={form.price_liter} onChange={e => set('price_liter', e.target.value)} />
         </Field>
       </ResponsiveGrid2>
 
       <div style={{ ...css.card, padding: 12, marginBottom: 14, background: theme.bg }}>
-        <span style={{ fontSize: 12, color: theme.muted }}>Total: </span>
+        <span style={{ fontSize: 12, color: theme.muted }}>{t('common.total')}: </span>
         <span style={{ fontSize: 18, fontWeight: 800, color: theme.accent }}>{total} €</span>
       </div>
 
-      <Field label="Tipo de conducción">
+      <Field label={t('fuelt.driveType')}>
         <div style={{ display: 'flex', gap: 6 }}>
           {MODES.map(m => (
             <button key={m.value} onClick={() => set('driving_mode', m.value)} type="button" style={{
@@ -61,25 +64,25 @@ function FuelFormModal({ open, onClose, onSave, carKm }) {
         </div>
       </Field>
 
-      <Field label="Depósito lleno">
+      <Field label={t('fuelt.fullTankQ')}>
         <div style={{ display: 'flex', gap: 8 }}>
           {[true, false].map(v => (
             <button key={String(v)} onClick={() => set('full_tank', v)} type="button" style={{
               ...css.btn(form.full_tank === v ? theme.accent : theme.bg, form.full_tank === v ? '#000' : theme.muted),
               flex: 1, justifyContent: 'center', border: `1px solid ${theme.border}`,
-            }}>{v ? 'Sí (lleno)' : 'No (parcial)'}</button>
+            }}>{v ? t('fuelt.yesFull') : t('fuelt.noPartial')}</button>
           ))}
         </div>
       </Field>
 
-      <Field label="Notas">
+      <Field label={t('common.notes')}>
         <input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Gasolinera, tipo..." />
       </Field>
 
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
-        <button onClick={onClose} style={css.btnOutline}>Cancelar</button>
+        <button onClick={onClose} style={css.btnOutline}>{t('common.cancel')}</button>
         <button onClick={handleSave} disabled={saving} style={css.btn()}>
-          <Save size={14} /> {saving ? 'Guardando...' : 'Guardar'}
+          <Save size={14} /> {saving ? t('common.saving') : t('common.save')}
         </button>
       </div>
     </Modal>
@@ -134,17 +137,17 @@ export default function FuelTab({ carId, carKm, fuelLogs, onReload, onToast, onK
       // Update car km
       if (onKmUpdate) await onKmUpdate(form.km)
       setShowAdd(false)
-      onToast('Repostaje registrado')
+      onToast(t('fuelt.added'))
       onReload()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleDelete = async (id) => {
     try {
       await deleteFuelLog(id)
-      onToast('Repostaje eliminado')
+      onToast(t('fuelt.deleted'))
       onReload()
-    } catch (err) { onToast('Error: ' + err.message, 'error') }
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const totalSpent = fuelLogs.reduce((s, l) => s + (l.total_cost || 0), 0)
@@ -158,29 +161,29 @@ export default function FuelTab({ carId, carKm, fuelLogs, onReload, onToast, onK
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: isMobile ? 8 : 12, marginBottom: 16 }}>
         {avg != null && (
-          <Stat icon={<TrendingDown size={18} color="#3b82f6" />} label="Consumo medio" value={`${avg} L/100`} color="#3b82f6" />
+          <Stat icon={<TrendingDown size={15} />} label={t('fuelt.avgConsum')} value={`${avg} L/100`} color={theme.accent} />
         )}
-        <Stat icon={<Fuel size={18} color={theme.accent} />} label="Total gastado" value={`${totalSpent.toFixed(0)}€`} />
-        <Stat icon={<Gauge size={18} color={theme.green} />} label="Total litros" value={`${totalLiters.toFixed(0)}L`} color={theme.green} />
+        <Stat icon={<Fuel size={18} color={theme.accent} />} label={t('fuelt.totalSpent')} value={`${totalSpent.toFixed(0)}€`} />
+        <Stat icon={<Gauge size={18} color={theme.green} />} label={t('fuelt.totalLitres')} value={`${totalLiters.toFixed(0)}L`} color={theme.green} />
         {avgPrice && (
-          <Stat icon={<Fuel size={18} color="#8b5cf6" />} label="Precio medio/L" value={`${avgPrice}€`} color="#8b5cf6" />
+          <Stat icon={<Fuel size={18} color={theme.muted} />} label={t('fuelt.avgPrice')} value={`${avgPrice}€`} color={theme.muted} />
         )}
       </div>
 
       <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
         <div style={{ ...css.flexBetween, padding: isMobile ? '12px 14px' : '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-          <h3 style={css.h3}><Fuel size={16} style={{ marginRight: 6 }} />Repostajes</h3>
+          <h3 style={css.h3}><Fuel size={16} style={{ marginRight: 6 }} />{t('fuelt.title')}</h3>
           <button onClick={() => setShowAdd(true)} style={css.btnSm(theme.accent, '#000')}>
-            <Plus size={12} /> Añadir
+            <Plus size={12} /> {t('common.add')}
           </button>
         </div>
 
         {fuelLogs.length === 0 ? (
           <div style={{ padding: 32, textAlign: 'center' }}>
             <Fuel size={32} color={theme.mutedLight} style={{ marginBottom: 8 }} />
-            <p style={{ color: theme.muted, fontSize: 13 }}>Sin repostajes</p>
+            <p style={{ color: theme.muted, fontSize: 13 }}>{t('fuelt.empty')}</p>
             <button onClick={() => setShowAdd(true)} style={{ ...css.btn(), marginTop: 12 }}>
-              <Plus size={14} /> Registrar repostaje
+              <Plus size={14} /> {t('fuelt.logIt')}
             </button>
           </div>
         ) : isMobile ? (
@@ -220,7 +223,7 @@ export default function FuelTab({ carId, carKm, fuelLogs, onReload, onToast, onK
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                  {['Fecha', 'Km', 'Litros', '€/L', 'Total', 'Consumo', 'Modo', '', ''].map((h, i) => (
+                  {[t('common.date'), t('common.km'), t('fuelt.litres'), t('fuelt.perLitre'), t('common.total'), t('fuelt.consum'), t('fuelt.modeCol'), '', ''].map((h, i) => (
                     <th key={i} style={css.th}>{h}</th>
                   ))}
                 </tr>
