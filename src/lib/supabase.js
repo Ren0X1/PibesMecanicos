@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { t } from './i18n.js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -28,7 +29,7 @@ export async function login(username, pin) {
     .ilike('username', username.trim())
     .eq('pin', pin)
     .single()
-  if (error || !data) throw new Error('Usuario o PIN incorrecto')
+  if (error || !data) throw new Error(t('login.errCreds'))
   return data
 }
 
@@ -158,6 +159,7 @@ export async function upsertMaintenanceRecord(record) {
         last_km: record.last_km, last_date: record.last_date,
         next_km: record.next_km, next_date: record.next_date,
         cost: record.cost, notes: record.notes,
+        workshop_id: record.workshop_id ?? null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existing.id)

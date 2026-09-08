@@ -1,5 +1,34 @@
 ═══════════════════════════════════════════════════════════════
  PIBES MECÁNICOS · ACTUALIZAR LA BASE DE DATOS
+ Migración 14 — enlazar los mantenimientos con el taller
+═══════════════════════════════════════════════════════════════
+
+LO ÚLTIMO QUE HAY QUE APLICAR
+─────────────────────────────
+Ejecuta el fichero:
+
+  supabase/14 - migration-workshop-link.sql
+
+Añade una columna "workshop_id" a la tabla "maintenance_records",
+opcional, que apunta a la tabla "workshops".
+
+Sirve para que la pantalla de talleres pueda decir, al elegir uno,
+cuánto te has gastado en él y qué trabajos te ha hecho. Sin la
+columna esa parte sale a cero: los mantenimientos guardaban el
+coste, pero no quién lo cobró.
+
+Se queda vacía en todo lo que ya existe, y así se queda hasta que
+edites un mantenimiento y elijas taller en el desplegable nuevo.
+Vacío significa "no consta", que es la verdad: no se puede
+adivinar quién hizo una reparación de hace dos años.
+
+Al borrar un taller no se pierde el historial: la columna se pone
+a vacío y los costes siguen ahí.
+
+Se puede ejecutar dos veces sin romper nada.
+
+
+═══════════════════════════════════════════════════════════════
  Migración 13 — preferencias de usuario (idioma, tema y color)
 ═══════════════════════════════════════════════════════════════
 
@@ -165,10 +194,10 @@ Fichero equivalente en SQL:
   supabase/13 - migration-user-preferences.sql
 
 Sobre la numeración de esta carpeta:
-  Los ficheros van con dos cifras (01, 02, ... 13) para que el
+  Los ficheros van con dos cifras (01, 02, ... 14) para que el
   explorador los ordene de verdad. Sin el cero delante, "10" se
   colaba justo detrás de "1" y "2" aparecía después de "13".
-  Al añadir una migración nueva, sigue la cuenta: 14, 15...
+  Al añadir una migración nueva, sigue la cuenta: 15, 16...
 
   schema-completo.sql   esquema entero, para empezar de cero
   migration-grants.sql  permisos, por si algo deja de verse

@@ -6,6 +6,9 @@
    ITV que venció antes de que existiera la aplicación.
    ───────────────────────────────────────────────────────────── */
 
+import { s } from './seedText.js'
+import { getLang } from '../i18n.js'
+
 const DAY = 86400000
 const iso = (d) => new Date(d).toISOString().slice(0, 10)
 const ago = (n) => iso(Date.now() - n * DAY)
@@ -26,10 +29,10 @@ export function buildSeed() {
   const cars = [
     { id: 'c-bmw', user_id: DEMO_USER_ID, plate: '4821 KLM', brand: 'BMW', model: '320d Touring', year: 2016,
       transmission: 'Automático', fuel: 'Diésel', current_km: 187450, vehicle_type: 'coche',
-      notes: 'Comprado con 96.000 km. Distribución hecha en el 2023.', created_at: tsAgo(400), updated_at: tsAgo(3) },
+      notes: s('seed.bmwNotes'), created_at: tsAgo(400), updated_at: tsAgo(3) },
     { id: 'c-mt07', user_id: DEMO_USER_ID, plate: '9137 PRT', brand: 'Yamaha', model: 'MT-07', year: 2021,
       transmission: 'Manual', fuel: 'Gasolina', current_km: 24310, vehicle_type: 'moto',
-      notes: 'Escape de serie guardado en el trastero.', created_at: tsAgo(280), updated_at: tsAgo(9) },
+      notes: s('seed.mtNotes'), created_at: tsAgo(280), updated_at: tsAgo(9) },
     { id: 'c-leon', user_id: 'u-marcos', plate: '2764 FHD', brand: 'Seat', model: 'León 1.5 TSI', year: 2019,
       transmission: 'Manual', fuel: 'Gasolina', current_km: 78900, vehicle_type: 'coche',
       notes: '', created_at: tsAgo(240), updated_at: tsAgo(20) },
@@ -41,20 +44,20 @@ export function buildSeed() {
   /* El BMW llega con dos vencidos y dos próximos: es lo que hace que
      el indicador de la ficha baje y se entienda de un vistazo. */
   const maintenance_records = [
-    m('c-bmw', 'pastillas_del', 147000, ago(300), 187100, null, 138.4, 'Pastillas Brembo, montadas en el taller de Nacho'),
+    m('c-bmw', 'pastillas_del', 147000, ago(300), 187100, null, 138.4, s('seed.padsNote'), 'w-1'),
     m('c-bmw', 'filtro_aire',   166200, ago(210), 186200, null, 24.9,  ''),
-    m('c-bmw', 'aceite',        178000, ago(120), 188000, ahead(45), 96.5, '5W30 long life, 7 litros'),
-    m('c-bmw', 'filtro_aceite', 178000, ago(120), 188000, ahead(45), 14.2, ''),
-    m('c-bmw', 'correa_dist',   112000, ago(700), 232000, null, 612.0, 'Kit completo con bomba de agua'),
-    m('c-bmw', 'neumaticos',    158000, ago(260), 203000, null, 428.0, 'Michelin Primacy 4'),
+    m('c-bmw', 'aceite',        178000, ago(120), 188000, ahead(45), 96.5, s('seed.oilNote'), 'w-1'),
+    m('c-bmw', 'filtro_aceite', 178000, ago(120), 188000, ahead(45), 14.2, '', 'w-1'),
+    m('c-bmw', 'correa_dist',   112000, ago(700), 232000, null, 612.0, s('seed.beltNote'), 'w-1'),
+    m('c-bmw', 'neumaticos',    158000, ago(260), 203000, null, 428.0, s('seed.tyreNote'), 'w-2'),
     m('c-bmw', 'bateria',       150000, ago(340), 210000, ahead(400), 121.0, ''),
     m('c-bmw', 'liquido_frenos',158000, ago(260), 198000, ahead(180), 42.0, ''),
 
-    m('c-mt07', 'aceite',       18200, ago(150), 27200, ahead(210), 58.0, 'Yamalube 10W40'),
+    m('c-mt07', 'aceite',       18200, ago(150), 27200, ahead(210), 58.0, s('seed.mtOilNote'), 'w-3'),
     m('c-mt07', 'filtro_aceite',18200, ago(150), 27200, ahead(210), 11.5, ''),
-    m('c-mt07', 'cadena',       12000, ago(300), 34000, null, 0, 'Engrasada cada 800 km'),
-    m('c-mt07', 'pastillas_del',10500, ago(330), 45500, null, 74.0, ''),
-    m('c-mt07', 'neumaticos',   11000, ago(320), 45000, null, 310.0, 'Michelin Road 5'),
+    m('c-mt07', 'cadena',       12000, ago(300), 34000, null, 0, s('seed.chainNote')),
+    m('c-mt07', 'pastillas_del',10500, ago(330), 45500, null, 74.0, '', 'w-3'),
+    m('c-mt07', 'neumaticos',   11000, ago(320), 45000, null, 310.0, s('seed.roadNote'), 'w-2'),
 
     m('c-leon', 'aceite',       68000, ago(190), 78000, ahead(10), 82.0, ''),
     m('c-leon', 'filtro_aire',  60000, ago(320), 80000, null, 21.0, ''),
@@ -89,45 +92,45 @@ export function buildSeed() {
   ]
 
   const car_parts = [
-    { id: 'p-1', car_id: 'c-bmw',  name: 'Filtro de aceite', reference: 'MANN HU 719/7 X', url: '', created_at: tsAgo(120) },
-    { id: 'p-2', car_id: 'c-bmw',  name: 'Filtro de habitáculo', reference: 'MANN CUK 2939', url: '', created_at: tsAgo(120) },
-    { id: 'p-3', car_id: 'c-bmw',  name: 'Pastillas delanteras', reference: 'BREMBO P06 040', url: '', created_at: tsAgo(300) },
-    { id: 'p-4', car_id: 'c-mt07', name: 'Kit de arrastre', reference: 'DID 520VX3 · 16/43', url: '', created_at: tsAgo(180) },
+    { id: 'p-1', car_id: 'c-bmw',  name: s('seed.partOil'), reference: 'MANN HU 719/7 X', url: '', created_at: tsAgo(120) },
+    { id: 'p-2', car_id: 'c-bmw',  name: s('seed.partCabin'), reference: 'MANN CUK 2939', url: '', created_at: tsAgo(120) },
+    { id: 'p-3', car_id: 'c-bmw',  name: s('seed.partPads'), reference: 'BREMBO P06 040', url: '', created_at: tsAgo(300) },
+    { id: 'p-4', car_id: 'c-mt07', name: s('seed.partChain'), reference: 'DID 520VX3 · 16/43', url: '', created_at: tsAgo(180) },
   ]
 
   const itv_records = [
     { id: 'i-1', car_id: 'c-bmw', inspection_date: ago(347), expiry_date: ahead(18), result: 'favorable',
-      station: 'ITV Málaga · Guadalhorce', defects: '', resolved: true, cost: 41.6, notes: '', created_at: tsAgo(347) },
+      station: s('seed.itvStation'), defects: '', resolved: true, cost: 41.6, notes: '', created_at: tsAgo(347) },
     { id: 'i-2', car_id: 'c-bmw', inspection_date: ago(712), expiry_date: ago(347), result: 'desfavorable',
-      station: 'ITV Málaga · Guadalhorce', defects: 'Holgura en bieleta delantera izquierda', resolved: true, cost: 41.6, notes: 'Repasada y aprobada a la semana', created_at: tsAgo(712) },
+      station: s('seed.itvStation'), defects: s('seed.itvDefect'), resolved: true, cost: 41.6, notes: s('seed.itvFixed'), created_at: tsAgo(712) },
     { id: 'i-3', car_id: 'c-mt07', inspection_date: ago(60), expiry_date: ahead(670), result: 'favorable',
-      station: 'ITV Málaga · Guadalhorce', defects: '', resolved: true, cost: 28.9, notes: '', created_at: tsAgo(60) },
+      station: s('seed.itvStation'), defects: '', resolved: true, cost: 28.9, notes: '', created_at: tsAgo(60) },
   ]
 
   const vehicle_todos = [
-    { id: 't-1', car_id: 'c-bmw',  title: 'Pedir cita para las pastillas', notes: 'Llamar al taller de Nacho', priority: 'alta',  completed: false, completed_at: null, created_at: tsAgo(6) },
-    { id: 't-2', car_id: 'c-bmw',  title: 'Mirar el ruido del rodamiento trasero', notes: 'Se oye a partir de 90 km/h', priority: 'media', completed: false, completed_at: null, created_at: tsAgo(14) },
-    { id: 't-3', car_id: 'c-bmw',  title: 'Cambiar escobillas', notes: '', priority: 'baja', completed: true, completed_at: tsAgo(30), created_at: tsAgo(48) },
-    { id: 't-4', car_id: 'c-mt07', title: 'Tensar la cadena', notes: 'Toca cada 800 km', priority: 'media', completed: false, completed_at: null, created_at: tsAgo(9) },
+    { id: 't-1', car_id: 'c-bmw',  title: s('seed.todoPads'), notes: s('seed.todoPadsNote'), priority: 'alta',  completed: false, completed_at: null, created_at: tsAgo(6) },
+    { id: 't-2', car_id: 'c-bmw',  title: s('seed.todoNoise'), notes: s('seed.todoNoiseNote'), priority: 'media', completed: false, completed_at: null, created_at: tsAgo(14) },
+    { id: 't-3', car_id: 'c-bmw',  title: s('seed.todoWipers'), notes: '', priority: 'baja', completed: true, completed_at: tsAgo(30), created_at: tsAgo(48) },
+    { id: 't-4', car_id: 'c-mt07', title: s('seed.todoChain'), notes: s('seed.todoChainNote'), priority: 'media', completed: false, completed_at: null, created_at: tsAgo(9) },
   ]
 
   const reminders = [
-    { id: 'r-1', user_id: DEMO_USER_ID, title: 'Renovar el seguro del BMW', notes: 'Pedir precio también en Mutua', due_date: ahead(24), car_id: 'c-bmw', completed: false, completed_at: null, created_at: tsAgo(12) },
-    { id: 'r-2', user_id: DEMO_USER_ID, title: 'Pasar la ITV',              notes: 'Cita previa por la web', due_date: ahead(18), car_id: 'c-bmw', completed: false, completed_at: null, created_at: tsAgo(12) },
-    { id: 'r-3', user_id: DEMO_USER_ID, title: 'Comprar anticongelante',    notes: '', due_date: ahead(60), car_id: null, completed: false, completed_at: null, created_at: tsAgo(5) },
-    { id: 'r-4', user_id: DEMO_USER_ID, title: 'Lavar y encerar la moto',   notes: '', due_date: ago(4), car_id: 'c-mt07', completed: true, completed_at: tsAgo(4), created_at: tsAgo(20) },
+    { id: 'r-1', user_id: DEMO_USER_ID, title: s('seed.remInsurance'), notes: s('seed.remInsuranceNote'), due_date: ahead(24), car_id: 'c-bmw', completed: false, completed_at: null, created_at: tsAgo(12) },
+    { id: 'r-2', user_id: DEMO_USER_ID, title: s('seed.remItv'), notes: s('seed.remItvNote'), due_date: ahead(18), car_id: 'c-bmw', completed: false, completed_at: null, created_at: tsAgo(12) },
+    { id: 'r-3', user_id: DEMO_USER_ID, title: s('seed.remCoolant'), notes: '', due_date: ahead(60), car_id: null, completed: false, completed_at: null, created_at: tsAgo(5) },
+    { id: 'r-4', user_id: DEMO_USER_ID, title: s('seed.remWash'), notes: '', due_date: ago(4), car_id: 'c-mt07', completed: true, completed_at: tsAgo(4), created_at: tsAgo(20) },
   ]
 
   const workshops = [
-    { id: 'w-1', name: 'Talleres Nacho',        phone: '+34600111222', address: 'Pol. Ind. San Luis, Málaga', rating: 5, specialty: 'Mecánica general', notes: 'De confianza. Avisa antes de tocar nada.', created_by: DEMO_USER_ID, created_at: tsAgo(200) },
-    { id: 'w-2', name: 'Neumáticos del Sur',    phone: '+34600333444', address: 'Av. Velázquez 118, Málaga',  rating: 4, specialty: 'Neumáticos y alineado', notes: 'Bien de precio, tardan un poco.', created_by: 'u-marcos', created_at: tsAgo(150) },
-    { id: 'w-3', name: 'MotoTaller Guadalmar',  phone: '+34600555666', address: 'C/ Cañaveral 4, Málaga',     rating: 5, specialty: 'Motos',              notes: 'Los únicos que tocan la MT sin dejar marcas.', created_by: DEMO_USER_ID, created_at: tsAgo(90) },
+    { id: 'w-1', name: s('seed.wsh1'), phone: '+34600111222', address: 'Pol. Ind. San Luis, Málaga', rating: 5, specialty: s('seed.wsh1Spec'), notes: s('seed.wsh1Note'), created_by: DEMO_USER_ID, created_at: tsAgo(200) },
+    { id: 'w-2', name: s('seed.wsh2'), phone: '+34600333444', address: 'Av. Velázquez 118, Málaga', rating: 4, specialty: s('seed.wsh2Spec'), notes: s('seed.wsh2Note'), created_by: 'u-marcos', created_at: tsAgo(150) },
+    { id: 'w-3', name: s('seed.wsh3'), phone: '+34600555666', address: 'C/ Cañaveral 4, Málaga', rating: 5, specialty: s('seed.wsh3Spec'), notes: s('seed.wsh3Note'), created_by: DEMO_USER_ID, created_at: tsAgo(90) },
   ]
 
   const groups = [
-    { id: 'g-1', name: 'Los Colegones', created_by: DEMO_USER_ID, status: 'approved', created_at: tsAgo(220) },
-    { id: 'g-2', name: 'Ruta de los domingos', created_by: 'u-javi', status: 'approved', created_at: tsAgo(70) },
-    { id: 'g-3', name: 'Clásicos Málaga', created_by: 'u-nuria', status: 'pending', created_at: tsAgo(4) },
+    { id: 'g-1', name: s('seed.grp1'), created_by: DEMO_USER_ID, status: 'approved', created_at: tsAgo(220) },
+    { id: 'g-2', name: s('seed.grp2'), created_by: 'u-javi', status: 'approved', created_at: tsAgo(70) },
+    { id: 'g-3', name: s('seed.grp3'), created_by: 'u-nuria', status: 'pending', created_at: tsAgo(4) },
   ]
 
   const group_members = [
@@ -142,15 +145,16 @@ export function buildSeed() {
   ]
 
   const group_messages = [
-    gmsg('g-1', 'u-marcos',   '¿Alguien sabe de alguien que haga chapa decente por Málaga?', 9),
-    gmsg('g-1', DEMO_USER_ID, 'Nacho no hace chapa, pero seguro que te pasa un contacto.', 9),
-    gmsg('g-1', 'u-nuria',    'Yo llevé la Vespa a Guadalmar y quedó fina.', 8),
-    gmsg('g-1', 'u-marcos',   'Voy a llamar entonces, gracias.', 8),
-    gmsg('g-1', DEMO_USER_ID, 'Por cierto, a mí me toca ITV en tres semanas. Aviso por si alguien la tiene cerca y vamos juntos.', 3),
-    gmsg('g-1', 'u-nuria',    'A mí me toca en verano, pero te acompaño igual.', 2),
+    gmsg('g-1', 'u-marcos',   s('seed.msg1'), 9),
+    gmsg('g-1', DEMO_USER_ID, s('seed.msg2'), 9),
+    gmsg('g-1', 'u-nuria',    s('seed.msg3'), 8),
+    gmsg('g-1', 'u-marcos',   s('seed.msg4'), 8),
+    gmsg('g-1', DEMO_USER_ID, s('seed.msg5'), 3),
+    gmsg('g-1', 'u-nuria',    s('seed.msg6'), 2),
   ]
 
   return {
+    _lang: getLang(),   // con qué idioma se generó este juego de datos
     profiles, cars, km_logs, maintenance_records, car_parts, fuel_logs,
     itv_records, workshops, groups, group_members, group_messages,
     group_invitations, vehicle_todos, reminders,
@@ -162,10 +166,11 @@ export function buildSeed() {
 let seq = 0
 const uid = (p) => `${p}-${++seq}`
 
-function m(car_id, type_id, last_km, last_date, next_km, next_date, cost, notes) {
+function m(car_id, type_id, last_km, last_date, next_km, next_date, cost, notes, workshop_id = null) {
   return {
     id: uid('m'), car_id, type_id, last_km, last_date, next_km, next_date,
-    cost, notes, created_at: new Date(last_date).toISOString(), updated_at: new Date(last_date).toISOString(),
+    cost, notes, workshop_id,
+    created_at: new Date(last_date).toISOString(), updated_at: new Date(last_date).toISOString(),
   }
 }
 

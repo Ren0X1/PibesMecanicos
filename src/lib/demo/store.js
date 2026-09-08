@@ -12,6 +12,7 @@
 
 import { buildSeed, DEMO_USER_ID } from './seed.js'
 import { K, remove as dropKeys } from '../storageKeys.js'
+import { getLang, onLangChange, t } from '../i18n.js'
 
 const KEY = K.demoDb
 
@@ -20,12 +21,27 @@ let db = load()
 function load() {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const saved = JSON.parse(raw)
+      /* Los datos de ejemplo se guardan ya traducidos, así que si el
+         visitante cambia de idioma hay que rehacerlos: si no, vería
+         la interfaz en un idioma y el contenido en otro. Es contenido
+         inventado, así que rehacerlo no le quita nada suyo. */
+      if (saved && saved._lang === getLang()) return saved
+    }
   } catch {}
   const fresh = buildSeed()
   persist(fresh)
   return fresh
 }
+
+/* Al cambiar de idioma, los datos de ejemplo se vuelven a generar. */
+onLangChange(() => {
+  if (db && db._lang !== getLang()) {
+    db = buildSeed()
+    persist()
+  }
+})
 
 function persist(next = db) {
   try { localStorage.setItem(KEY, JSON.stringify(next)) } catch {}
@@ -85,7 +101,7 @@ export async function login(username, pin) {
   const u = db.profiles.find(
     p => p.username.toLowerCase() === String(username).trim().toLowerCase() && p.pin === pin
   )
-  if (!u) throw new Error('Usuario o PIN incorrecto')
+  if (!u) throw new Error(t('login.errCreds'))
   return ok(u)
 }
 
@@ -95,7 +111,7 @@ export async function getProfiles() {
 
 export async function createProfile({ name, username, pin, role = 'user' }) {
   const clean = String(username).toLowerCase().trim()
-  if (db.profiles.some(p => p.username === clean)) throw new Error('Ese usuario ya existe')
+  if (db.profiles.some(p => p.username === clean)) throw new Error(t('adm.userExists'))
   const row = {
     id: uid('u'), name, username: clean, email: null, pin,
     role, pin_change_required: false, created_at: now(),
@@ -106,7 +122,7 @@ export async function createProfile({ name, username, pin, role = 'user' }) {
 
 export async function updateProfile(id, updates) {
   const row = db.profiles.find(p => p.id === id)
-  if (!row) throw new Error('Usuario no encontrado')
+  if (!row) throw new Error(t('err.userNotFound'))
   Object.assign(row, updates); persist()
   return ok(row)
 }
@@ -149,7 +165,7 @@ export async function createCar(car) {
 
 export async function updateCar(id, updates) {
   const row = db.cars.find(c => c.id === id)
-  if (!row) throw new Error('Vehículo no encontrado')
+  if (!row) throw new Error(t('err.carNotFound'))
   Object.assign(row, updates, { updated_at: now() }); persist()
   return ok(row)
 }
@@ -189,7 +205,9 @@ export async function upsertMaintenanceRecord(record) {
     Object.assign(existing, {
       last_km: record.last_km, last_date: record.last_date,
       next_km: record.next_km, next_date: record.next_date,
-      cost: record.cost, notes: record.notes, updated_at: now(),
+      cost: record.cost, notes: record.notes,
+      workshop_id: record.workshop_id ?? null,
+      updated_at: now(),
     })
     persist()
     return ok(existing)
@@ -260,7 +278,7 @@ export async function createVehicleTodo(todo) {
 
 export async function updateVehicleTodo(id, updates) {
   const row = db.vehicle_todos.find(r => r.id === id)
-  if (!row) throw new Error('Tarea no encontrada')
+  if (!row) throw new Error(t('err.todoNotFound'))
   Object.assign(row, updates); persist()
   return ok(row)
 }
@@ -291,7 +309,7 @@ export async function createReminder(reminder) {
 
 export async function updateReminder(id, updates) {
   const row = db.reminders.find(r => r.id === id)
-  if (!row) throw new Error('Recordatorio no encontrado')
+  if (!row) throw new Error(t('err.remNotFound'))
   Object.assign(row, updates); persist()
   return withCar(row)
 }
@@ -319,7 +337,7 @@ export async function createWorkshop(ws) {
 
 export async function updateWorkshop(id, updates) {
   const row = db.workshops.find(r => r.id === id)
-  if (!row) throw new Error('Taller no encontrado')
+  if (!row) throw new Error(t('err.wshNotFound'))
   Object.assign(row, updates); persist()
   return withCreator(row)
 }
@@ -352,7 +370,7 @@ export async function createItvRecord(record) {
 
 export async function updateItvRecord(id, updates) {
   const row = db.itv_records.find(r => r.id === id)
-  if (!row) throw new Error('ITV no encontrada')
+  if (!row) throw new Error(t('err.itvNotFound'))
   Object.assign(row, updates); persist()
   return ok(row)
 }
