@@ -1,10 +1,53 @@
 ═══════════════════════════════════════════════════════════════
  PIBES MECÁNICOS · ACTUALIZAR LA BASE DE DATOS
- Migración 14 — enlazar los mantenimientos con el taller
+ Migración 15 — permisos de la Data API
 ═══════════════════════════════════════════════════════════════
 
 LO ÚLTIMO QUE HAY QUE APLICAR
 ─────────────────────────────
+Ejecuta el fichero:
+
+  supabase/15 - migration-grants-api.sql
+
+Es por un cambio de Supabase: desde el 30 de octubre deja de dar
+acceso automático a la Data API a las tablas NUEVAS del esquema
+public. Las catorce que ya existen no cambian y la aplicación
+sigue funcionando igual sin hacer nada; pero una tabla creada a
+partir de esa fecha sin permisos explícitos no se ve desde la
+app, y la API contesta "permission denied".
+
+La migración da los permisos a las tablas de ahora y, lo que
+importa, deja configurados los defaults para que las tablas que
+se creen en el futuro nazcan ya con ellos.
+
+No toca ni un dato. Se puede ejecutar dos veces sin romper nada.
+
+Al final del fichero hay tres consultas para comprobar que ha
+ido bien. Las dos que hay que mirar: los defaults tienen que
+devolver tres filas, y la lista de tablas a las que no llega el
+rol anónimo tiene que salir vacía.
+
+Dos detalles que se olvidan:
+
+ - Los defaults son POR ROL, y solo cubren lo que cree el rol
+   "postgres" (el del editor SQL y el del panel). Una preview
+   branch o un "supabase db reset" en local no los tienen. Por
+   eso, cada migración nueva que cree una tabla lleva su propio
+   GRANT dentro, como ya hacen la 12 y la 13. Sigue esa
+   costumbre en la 16 y siguientes.
+
+ - Estos permisos dan escritura completa al rol anónimo. Es lo
+   que el proyecto tiene hoy —las políticas RLS son
+   USING (true)—, así que esto no empeora nada; pero cuando se
+   haga la fase de seguridad habrá que recortarlo.
+
+
+═══════════════════════════════════════════════════════════════
+ Migración 14 — enlazar los mantenimientos con el taller
+═══════════════════════════════════════════════════════════════
+
+QUÉ HACE
+────────
 Ejecuta el fichero:
 
   supabase/14 - migration-workshop-link.sql
@@ -194,10 +237,12 @@ Fichero equivalente en SQL:
   supabase/13 - migration-user-preferences.sql
 
 Sobre la numeración de esta carpeta:
-  Los ficheros van con dos cifras (01, 02, ... 14) para que el
+  Los ficheros van con dos cifras (01, 02, ... 15) para que el
   explorador los ordene de verdad. Sin el cero delante, "10" se
   colaba justo detrás de "1" y "2" aparecía después de "13".
-  Al añadir una migración nueva, sigue la cuenta: 15, 16...
+  Al añadir una migración nueva, sigue la cuenta: 16, 17...
 
   schema-completo.sql   esquema entero, para empezar de cero
-  migration-grants.sql  permisos, por si algo deja de verse
+  migration-grants.sql  la versión sin numerar de la 15, anterior
+                        al correo de Supabase. Se queda por
+                        historia: lo que hay que ejecutar es la 15.
