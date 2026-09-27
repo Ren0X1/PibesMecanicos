@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { theme, css, FONT } from '../lib/theme.js'
 import {
-  getMaintenanceRecords, getVehicleTodos, getCarParts,
+  getMaintenanceRecords, getVehicleTodos, getCarParts, getCustomJobs,
   getFuelLogs, getKmLogs, getItvRecords,
 } from '../lib/api.js'
 import { MAINT_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
@@ -122,12 +122,16 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
   useLang()
   const [tab, setTab] = useState('maint')
 
-  const { maintenance, todos, parts, fuelLogs, kmLogs, itv } = data
+  const { maintenance, todos, parts, fuelLogs, kmLogs, itv, jobs = [] } = data
   const stats = health(maintenance, car.current_km)
+  /* Los trabajos libres son gasto del vehículo como cualquier otro:
+     si no se suman aquí, esta cifra y la de la pestaña Gastos dicen
+     cosas distintas del mismo coche. */
   const cost = useMemo(
     () => maintenance.reduce((s, m) => s + Number(m.cost || 0), 0)
+        + jobs.reduce((s, j) => s + Number(j.cost || 0), 0)
         + fuelLogs.reduce((s, f) => s + Number(f.total_cost || 0), 0),
-    [maintenance, fuelLogs]
+    [maintenance, jobs, fuelLogs]
   )
 
   const pendingTodos = todos.filter(x => !x.completed).length
@@ -474,9 +478,10 @@ export default function DesktopGarage({ cars, meta, wide, context, tall, onAdd, 
     Promise.all([
       getMaintenanceRecords(selectedId), getVehicleTodos(selectedId), getCarParts(selectedId),
       getFuelLogs(selectedId), getKmLogs(selectedId), getItvRecords(selectedId),
-    ]).then(([maintenance, todos, parts, fuelLogs, kmLogs, itv]) => {
+      getCustomJobs(selectedId),
+    ]).then(([maintenance, todos, parts, fuelLogs, kmLogs, itv, jobs]) => {
       if (!alive) return
-      setData({ maintenance, todos, parts, fuelLogs, kmLogs, itv })
+      setData({ maintenance, todos, parts, fuelLogs, kmLogs, itv, jobs })
       setLoading(false)
     }).catch(err => {
       if (!alive) return
