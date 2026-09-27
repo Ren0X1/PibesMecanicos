@@ -27,7 +27,10 @@ const FUERA = ['strings.js', 'seedStrings.js', 'seedText.js', 'preview.jsx']
 /* El nombre de la aplicación no se traduce: es como se llama. */
 const MARCA = /^(pibes\s*)?mec[áa]nicos$/i
 
-const PALABRAS = /\b(miembros?|coches?|veh[íi]culos?|talleres?|usuarios?|gente|d[íi]as?|a[ñn]os?|semanas?|gastos?|avisos?|grupos?|pendientes?|creado|eliminar|guardar|cancelar|siguiente|intervalo)\b/i
+/* Sustantivos y —esto se añadió después— los participios que
+   salen en los avisos: «ITV actualizada» y «Registro eliminado»
+   no llevan un solo acento, así que se colaban entre los dedos. */
+const PALABRAS = /\b(miembros?|coches?|veh[íi]culos?|talleres?|usuarios?|gente|d[íi]as?|a[ñn]os?|semanas?|gastos?|avisos?|grupos?|pendientes?|registros?|intervalo|ITV|cread[oa]s?|eliminad[oa]s?|actualizad[oa]s?|registrad[oa]s?|guardad[oa]s?|a[ñn]adid[oa]s?|borrad[oa]s?|enviad[oa]s?|eliminar|guardar|cancelar|siguiente)\b/i
 const ACENTOS = /[áéíóúüñ¿¡]/i
 
 async function ficheros(dir) {
@@ -48,17 +51,30 @@ function sinComentarios(src) {
     .replace(/(^|[^:])\/\/[^\r\n]*/g, '$1 ')
 }
 
-/* Lo que ve un usuario: el texto entre etiquetas y lo que va en
-   los atributos que se leen en pantalla. */
+/* Lo que ve un usuario: el texto entre etiquetas, lo que va en los
+   atributos que se leen en pantalla y —esto se añadió después— el
+   texto que se le suelta en un aviso.
+
+   Los avisos se escapaban porque viven en JavaScript y no entre
+   etiquetas: `onToast('ITV actualizada')` estuvo meses saliendo en
+   castellano con la aplicación en inglés. */
 function candidatos(src) {
   const out = []
   const limpio = sinComentarios(src)
 
   for (const m of limpio.matchAll(/>([^<>]{3,120})</g)) {
     const txt = m[1].replace(/\{[^{}]*\}/g, '').trim()
-    if (txt) out.push(txt)
+    /* Entre un `=>` y un `<` hay código, no texto: sin este filtro
+       el buscador leía media condición y se quejaba de la palabra
+       «guardados». Lo que ve un usuario no lleva llaves, paréntesis
+       ni saltos de línea. */
+    if (txt && !/[{}()=;]|\n/.test(txt)) out.push(txt)
   }
   for (const m of limpio.matchAll(/(?:placeholder|title|label|alt)\s*=\s*["']([^"']{3,120})["']/g)) {
+    out.push(m[1])
+  }
+  /* Avisos y mensajes de error escritos a mano. */
+  for (const m of limpio.matchAll(/(?:onToast|setError|alert)\s*\(\s*["']([^"']{3,120})["']/g)) {
     out.push(m[1])
   }
   return out

@@ -170,10 +170,10 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
           notes: form.notes,
           resolved: form.resolved,
         })
-        onToast('ITV actualizada')
+        onToast(t('itv.updated'))
       } else {
         await createItvRecord({ car_id: carId, ...form })
-        onToast('ITV registrada')
+        onToast(t('itv.added'))
       }
       setShowForm(false)
       setEditRecord(null)
@@ -183,7 +183,7 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
 
   const handleDelete = async (id) => {
     if (!await confirmar(t('itv.confirm'))) return
-    try { await deleteItvRecord(id); onToast('Registro eliminado'); onReload() }
+    try { await deleteItvRecord(id); onToast(t('car.recordDeleted')); onReload() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 

@@ -105,6 +105,13 @@ vigilan: uno busca claves repetidas y otro busca castellano suelto
 en las pantallas. Si el segundo te salta, la solución es una clave
 nueva, no una excepción en el test.
 
+El segundo mira **también los avisos** (`onToast`, `setError`,
+`alert`) y conoce los participios —«actualizada», «eliminado»—,
+porque `onToast('ITV actualizada')` no lleva un solo acento y
+estuvo meses saliendo en castellano con la aplicación en inglés.
+Cuando lo aprendió, encontró además un «ITV:» a pelo en la ficha
+que ven los amigos.
+
 ### 4 bis. Nada de confirm() del navegador
 
 Preguntar «¿seguro?» se hace con `useConfirm()` de `ui.jsx`, que
@@ -214,7 +221,7 @@ solo aparecía al pintar el componente.
 
 De ahí salieron las dos herramientas que hay:
 
-**Los tests** (`npm test`, 173). Montan cada pantalla de verdad,
+**Los tests** (`npm test`, 175). Montan cada pantalla de verdad,
 en los seis idiomas, en los dos temas y —en `wide.test.jsx`— con
 `matchMedia` diciendo que sí, que es la única forma de probar la
 mitad ancha del código.

@@ -166,6 +166,19 @@ export function nextFrom(lastKm, lastDate, mt, vehicleType) {
   return { next_km, next_date }
 }
 
+/* Los resultados de una ITV. El valor se guarda en castellano
+   —viene de la base— y la etiqueta se resuelve al pintar, como
+   todo lo demás. Vivía dentro de ItvCard, y por eso la ficha que
+   ven los amigos enseñaba «favorable» sin traducir. */
+export const ITV_RESULTS = [
+  { value: 'favorable', get label() { return t('itv.favorable') } },
+  { value: 'desfavorable', get label() { return t('itv.unfavorable') } },
+  { value: 'negativa', get label() { return t('itv.negative') } },
+]
+
+export const itvResultLabel = (v) =>
+  ITV_RESULTS.find(r => r.value === v)?.label || v
+
 /* Los valores se guardan en castellano por compatibilidad con lo
    que ya hay en la base de datos; solo cambia cómo se muestran. */
 export const FUEL_TYPES = ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico', 'GLP']

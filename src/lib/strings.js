@@ -245,6 +245,8 @@ export const STRINGS = {
   'itv.new':        { en: 'New test', es: 'Nueva ITV', zh: '新增年检', de: 'Neue HU', fr: 'Nouveau contrôle', ru: 'Новый техосмотр' },
   'itv.edit':       { en: 'Edit test', es: 'Editar ITV', zh: '编辑年检', de: 'HU bearbeiten', fr: 'Modifier le contrôle', ru: 'Изменить техосмотр' },
   'itv.empty':      { en: 'No test logged', es: 'Sin ITV registrada', zh: '暂无年检记录', de: 'Keine HU erfasst', fr: 'Aucun contrôle enregistré', ru: 'Техосмотр не записан' },
+  'itv.added':      { en: 'Test logged', es: 'ITV registrada', zh: '年检已记录', de: 'HU erfasst', fr: 'Contrôle enregistré', ru: 'Техосмотр записан' },
+  'itv.updated':    { en: 'Test updated', es: 'ITV actualizada', zh: '年检已更新', de: 'HU aktualisiert', fr: 'Contrôle mis à jour', ru: 'Техосмотр обновлён' },
   'itv.confirm':    { en: 'Delete this test record?', es: '¿Eliminar este registro de ITV?', zh: '删除这条年检记录？', de: 'Diesen HU-Eintrag löschen?', fr: 'Supprimer cet enregistrement de contrôle ?', ru: 'Удалить эту запись техосмотра?' },
   'itv.inspection': { en: 'Test date', es: 'Fecha de inspección', zh: '检验日期', de: 'Prüfdatum', fr: 'Date du contrôle', ru: 'Дата осмотра' },
   'itv.expiry':     { en: 'Valid until', es: 'Caducidad', zh: '有效期至', de: 'Gültig bis', fr: 'Validité', ru: 'Действует до' },

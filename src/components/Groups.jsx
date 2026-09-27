@@ -14,7 +14,7 @@ import {
   getMaintenanceRecords, getCarParts, getItvRecords, getFuelLogs,
   inviteToGroup, getMyInvitations, getGroupInvitations, acceptInvitation, rejectInvitation
 } from '../lib/api.js'
-import { getMaintStatus, MAINT_TYPES, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
+import { getMaintStatus, MAINT_TYPES, fuelLabel, transLabel, maintLabel, itvResultLabel } from '../lib/constants.js'
 import { Modal, Field, Loader, StatusBadge, useConfirm } from './ui.jsx'
 
 function calcAvgConsumption(logs) {
@@ -67,7 +67,7 @@ function CarViewer({ car, onClose, isMobile }) {
           {latest_itv && <span style={css.badge(
             latest_itv.result === 'favorable' ? theme.greenSoft : theme.yellowSoft,
             latest_itv.result === 'favorable' ? theme.green : theme.yellow
-          )}>ITV: {latest_itv.result}</span>}
+          )}>{t('itv.short')}: {itvResultLabel(latest_itv.result)}</span>}
           {avgConsumption && <span style={css.badge('rgba(59,130,246,0.12)', theme.accent)}>⛽ {avgConsumption} L/100</span>}
         </div>
       </div>
