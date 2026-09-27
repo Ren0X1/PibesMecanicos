@@ -85,9 +85,12 @@ describe('la pantalla de web apagada', () => {
     expect(html).toContain('Estamos haciendo cambios')
   })
 
-  it('sin sesión ofrece la puerta de administración', async () => {
+  /* Este fichero corre como si estuviéramos dentro de la demo, y
+     ahí la puerta que toca es la de salir de ella: el acceso de
+     administración se prueba en muroDemo.test.jsx. */
+  it('dentro de la demo ofrece salir de la demo', async () => {
     const html = await render(<MaintenanceWall user={null} message="" onLogin={noop} onLogout={noop} />)
-    expect(html).toContain('Acceso de administración')
+    expect(html).toContain('Salir de la demo')
   })
 
   it('a quien ha entrado y no es administrador se lo dice', async () => {

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { theme, css } from '../lib/theme.js'
 import { t, useLang } from '../lib/i18n.js'
 import Login from './Login.jsx'
+import { isDemo, exitDemo } from '../lib/demo/mode.js'
 import Footer from './Footer.jsx'
 
 /* ─────────────────────────────────────────────────────────────
@@ -20,9 +21,14 @@ export default function MaintenanceWall({ user, message, onLogin, onLogout }) {
   useLang()
   const [entrando, setEntrando] = useState(false)
 
+  /* Sin la puerta de la demo: mientras la web está apagada, no hay
+     ninguna forma de entrar que no sea con una cuenta de
+     administración. */
   if (entrando && !user) {
-    return <Login onLogin={onLogin} />
+    return <Login onLogin={onLogin} sinDemo />
   }
+
+  const enDemo = isDemo()
 
   return (
     <div style={{
@@ -56,8 +62,13 @@ export default function MaintenanceWall({ user, message, onLogin, onLogout }) {
               </p>
             )}
 
-            <div style={{ marginTop: 26, display: 'flex', gap: 8 }}>
-              {user ? (
+            <div style={{ marginTop: 26, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {/* En la demo no hay sesión que cerrar: salir de la
+                  demo ES la salida, y poner los dos botones dejaba
+                  dos «Salir» iguales uno al lado del otro. */}
+              {enDemo ? (
+                <button onClick={exitDemo} style={css.btnOutline}>{t('demo.exit')}</button>
+              ) : user ? (
                 <button onClick={onLogout} style={css.btnOutline}>{t('nav.logout')}</button>
               ) : (
                 <button onClick={() => setEntrando(true)} style={css.btnOutline}>

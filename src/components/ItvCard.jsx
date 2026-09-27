@@ -4,7 +4,7 @@ import { theme, css } from '../lib/theme.js'
 import { t, useLang, fmtDate } from '../lib/i18n.js'
 import { formatDate } from '../lib/constants.js'
 import { createItvRecord, updateItvRecord, deleteItvRecord } from '../lib/api.js'
-import { Modal, Field, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
+import { Modal, Field, ResponsiveGrid2, DateInput, NumInput, useConfirm } from './ui.jsx'
 
 const RESULTS = [
   { value: 'favorable', get label() { return t('itv.favorable') }, get color() { return theme.green }, get desc() { return t('itv.noDefects') } },
@@ -138,6 +138,7 @@ function ItvFormModal({ open, onClose, onSave, initial, isEditing }) {
 }
 
 export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile, dense }) {
+  const confirmar = useConfirm()
   const [showForm, setShowForm] = useState(false)
   const [editRecord, setEditRecord] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
@@ -181,7 +182,7 @@ export default function ItvCard({ carId, itvRecords, onReload, onToast, isMobile
   }
 
   const handleDelete = async (id) => {
-    if (!confirm(t('itv.confirm'))) return
+    if (!await confirmar(t('itv.confirm'))) return
     try { await deleteItvRecord(id); onToast('Registro eliminado'); onReload() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }

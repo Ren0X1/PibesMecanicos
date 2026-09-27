@@ -1,14 +1,40 @@
--- ╔══════════════════════════════════════════════════════════╗
--- ║  PIBES MECÁNICOS - SCHEMA UNIFICADO                     ║
--- ║  Versión completa con todas las features hasta hoy      ║
--- ║                                                          ║
--- ║  ⚠️  Si es un proyecto NUEVO: ejecuta este fichero entero║
--- ║      una sola vez en Supabase Dashboard > SQL Editor    ║
--- ║                                                          ║
--- ║  ⚠️  Si ya tienes datos: este script es IDEMPOTENTE,    ║
--- ║      puedes ejecutarlo y solo añadirá lo que falte      ║
--- ║      sin tocar lo existente.                            ║
--- ╚══════════════════════════════════════════════════════════╝
+-- ╔══════════════════════════════════════════════════════════════╗
+-- ║  PIBES MECÁNICOS · INSTALAR DE CERO                          ║
+-- ║                                                              ║
+-- ║  Este fichero deja la base lista de una sentada. No hace     ║
+-- ║  falta pasar por las diecinueve migraciones: aquí está el    ║
+-- ║  resultado de todas ellas.                                   ║
+-- ║                                                              ║
+-- ║  CÓMO                                                        ║
+-- ║   1. Crea un proyecto en https://supabase.com                ║
+-- ║   2. SQL Editor → New query                                  ║
+-- ║   3. Pega este fichero ENTERO y pulsa Run                    ║
+-- ║   4. Settings → API: copia la URL y la clave publishable a   ║
+-- ║      un fichero .env del proyecto:                           ║
+-- ║                                                              ║
+-- ║        VITE_SUPABASE_URL=https://xxxxx.supabase.co           ║
+-- ║        VITE_SUPABASE_ANON_KEY=sb_pub_...                     ║
+-- ║                                                              ║
+-- ║   5. npm install && npm run dev                              ║
+-- ║   6. Entra con el usuario admin / PIN 1234 y cámbialo.       ║
+-- ║                                                              ║
+-- ║  QUÉ DEJA                                                    ║
+-- ║   · 16 tablas con sus índices, RLS y permisos de la Data API ║
+-- ║   · las piezas por eje, con sus dos lados                    ║
+-- ║   · trabajos libres y recambios enlazados                    ║
+-- ║   · el modo mantenimiento, apagado                           ║
+-- ║   · el interruptor para que la base no se pause, encendido   ║
+-- ║   · un usuario «admin» con PIN 1234, solo si no hay ninguno  ║
+-- ║                                                              ║
+-- ║  SE PUEDE EJECUTAR DOS VECES. Sobre una base que ya tiene    ║
+-- ║  datos añade lo que falte y no toca nada de lo que hay, así  ║
+-- ║  que también sirve para ponerse al día de una vez.           ║
+-- ║                                                              ║
+-- ║  OJO: el acceso de esta aplicación no tiene seguridad real   ║
+-- ║  —los PIN se guardan en claro y las políticas RLS están      ║
+-- ║  abiertas—. Está explicado en CLAUDE.md. Para un cuaderno    ║
+-- ║  entre amigos vale; para algo serio, no.                     ║
+-- ╚══════════════════════════════════════════════════════════════╝
 
 
 -- ═══════════════════════════════════════════════════════════
@@ -293,6 +319,30 @@ CREATE TABLE IF NOT EXISTS custom_jobs (
 
 
 -- ═══════════════════════════════════════════════════════════
+-- 11 quater) AJUSTES DE LA APLICACIÓN
+-- ═══════════════════════════════════════════════════════════
+-- Una fila por ajuste: el modo mantenimiento y el interruptor que
+-- impide que la base se pause por inactividad. Así, el siguiente
+-- interruptor no necesita otra migración.
+
+CREATE TABLE IF NOT EXISTS app_settings (
+  key        TEXT PRIMARY KEY,
+  value      JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  updated_by UUID REFERENCES profiles(id) ON DELETE SET NULL
+);
+
+-- Nacen apagado el mantenimiento y encendido el keepalive, que es
+-- para lo que se hizo. Si ya existen, no se tocan: volver a lanzar
+-- este fichero no puede apagar ni encender la web.
+INSERT INTO app_settings (key, value) VALUES
+  ('maintenance',    '{"on": false, "message": ""}'::jsonb),
+  ('keepalive',      '{"on": true, "every_hours": 6}'::jsonb),
+  ('keepalive_ping', '{"at": null, "source": ""}'::jsonb)
+ON CONFLICT (key) DO NOTHING;
+
+
+-- ═══════════════════════════════════════════════════════════
 -- 11 ter) LAS CLAVES AJENAS QUE MIRABAN HACIA ADELANTE
 -- ═══════════════════════════════════════════════════════════
 -- maintenance_records se crea antes que workshops y car_parts, así
@@ -336,6 +386,14 @@ CREATE INDEX IF NOT EXISTS idx_reminders_user_due ON reminders(user_id, complete
 CREATE INDEX IF NOT EXISTS idx_maintenance_part ON maintenance_records(part_id);
 CREATE INDEX IF NOT EXISTS idx_custom_jobs_car ON custom_jobs(car_id);
 CREATE INDEX IF NOT EXISTS idx_custom_jobs_date ON custom_jobs(date DESC);
+CREATE INDEX IF NOT EXISTS idx_custom_jobs_part ON custom_jobs(part_id);
+CREATE INDEX IF NOT EXISTS idx_custom_jobs_workshop ON custom_jobs(workshop_id);
+CREATE INDEX IF NOT EXISTS idx_app_settings_by ON app_settings(updated_by);
+CREATE INDEX IF NOT EXISTS idx_group_invitations_by ON group_invitations(invited_by);
+CREATE INDEX IF NOT EXISTS idx_group_messages_user ON group_messages(user_id);
+CREATE INDEX IF NOT EXISTS idx_groups_created_by ON groups(created_by);
+CREATE INDEX IF NOT EXISTS idx_reminders_car ON reminders(car_id);
+CREATE INDEX IF NOT EXISTS idx_workshops_created_by ON workshops(created_by);
 
 
 -- ═══════════════════════════════════════════════════════════
@@ -357,6 +415,7 @@ ALTER TABLE group_invitations   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicle_todos       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reminders           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE custom_jobs         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings        ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "profiles_all"        ON profiles;
 DROP POLICY IF EXISTS "cars_all"            ON cars;
@@ -373,6 +432,7 @@ DROP POLICY IF EXISTS "group_invitations_all" ON group_invitations;
 DROP POLICY IF EXISTS "vehicle_todos_all"   ON vehicle_todos;
 DROP POLICY IF EXISTS "reminders_all"       ON reminders;
 DROP POLICY IF EXISTS "custom_jobs_all"    ON custom_jobs;
+DROP POLICY IF EXISTS "app_settings_all"   ON app_settings;
 
 CREATE POLICY "profiles_all"        ON profiles            FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "cars_all"            ON cars                FOR ALL USING (true) WITH CHECK (true);
@@ -389,6 +449,7 @@ CREATE POLICY "group_invitations_all" ON group_invitations  FOR ALL USING (true)
 CREATE POLICY "vehicle_todos_all"   ON vehicle_todos       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "reminders_all"       ON reminders           FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "custom_jobs_all"    ON custom_jobs         FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "app_settings_all"   ON app_settings        FOR ALL USING (true) WITH CHECK (true);
 
 
 -- ═══════════════════════════════════════════════════════════

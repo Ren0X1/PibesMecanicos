@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { CheckSquare, Square, Plus, Trash2, Save, Edit2, ChevronDown, ChevronRight, Flag } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { createVehicleTodo, updateVehicleTodo, deleteVehicleTodo } from '../lib/api.js'
-import { Modal, Field } from './ui.jsx'
+import { Modal, Field, useConfirm } from './ui.jsx'
 import { t, useLang } from '../lib/i18n.js'
 
 /* El valor viaja a la base de datos; la etiqueta se resuelve al
@@ -125,6 +125,7 @@ function TodoRow({ todo, onToggle, onEdit, onDelete, isMobile }) {
 }
 
 export default function TodoTab({ carId, todos, onReload, onToast, isMobile }) {
+  const confirmar = useConfirm()
   const [showForm, setShowForm] = useState(false)
   const [editTodo, setEditTodo] = useState(null)
   const [quickAdd, setQuickAdd] = useState('')
@@ -165,7 +166,7 @@ export default function TodoTab({ carId, todos, onReload, onToast, isMobile }) {
   }
 
   const handleDelete = async (todo) => {
-    if (!confirm(t('todo.confirm', { title: todo.title }))) return
+    if (!await confirmar(t('todo.confirm', { title: todo.title }))) return
     try {
       await deleteVehicleTodo(todo.id)
       onToast(t('common.deleted'))

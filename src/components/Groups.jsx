@@ -15,7 +15,7 @@ import {
   inviteToGroup, getMyInvitations, getGroupInvitations, acceptInvitation, rejectInvitation
 } from '../lib/api.js'
 import { getMaintStatus, MAINT_TYPES, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
-import { Modal, Field, Loader, StatusBadge } from './ui.jsx'
+import { Modal, Field, Loader, StatusBadge, useConfirm } from './ui.jsx'
 
 function calcAvgConsumption(logs) {
   if (logs.length < 2) return null
@@ -167,8 +167,9 @@ function GroupDetail({ group, user, onBack, onToast, isMobile, split }) {
     } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
+  const confirmar = useConfirm()
   const handleRemoveMember = async (userId) => {
-    if (!confirm(t('grp.removeMember'))) return
+    if (!await confirmar(t('grp.removeMember'))) return
     try { await removeGroupMember(group.id, userId); onToast(t('common.deleted')); load() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
@@ -436,6 +437,7 @@ function GroupDetail({ group, user, onBack, onToast, isMobile, split }) {
 
 /* ── Main Groups Page ── */
 export default function Groups({ user, onToast }) {
+  const confirmar = useConfirm()
   useLang()
   const mob = useIsMobile()
   const [groups, setGroups] = useState([])
@@ -483,7 +485,7 @@ export default function Groups({ user, onToast }) {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm(t('grp.deleteConfirm'))) return
+    if (!await confirmar(t('grp.deleteConfirm'))) return
     try { await deleteGroup(id); onToast(t('grp.deleted')); load() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }

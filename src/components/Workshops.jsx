@@ -3,7 +3,7 @@ import { Wrench, Plus, Trash2, Save, Edit2, Star, Phone, MapPin, MessageCircle }
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getWorkshops, createWorkshop, deleteWorkshop, updateWorkshop, getCars, getMaintenanceRecords, getCustomJobs } from '../lib/api.js'
-import { Modal, Field, Loader } from './ui.jsx'
+import { Modal, Field, Loader, useConfirm } from './ui.jsx'
 import { t, useLang, fmtMoney } from '../lib/i18n.js'
 import { MAINT_TYPES, formatDate, maintLabel } from '../lib/constants.js'
 import TwoColumn, { useTwoCol, Panel, Figure, AttentionList } from './TwoColumn.jsx'
@@ -53,6 +53,7 @@ function WorkshopFormModal({ open, onClose, onSave, initial }) {
 }
 
 export default function Workshops({ user, onToast }) {
+  const confirmar = useConfirm()
   useLang()
   const mob = useIsMobile()
   const [workshops, setWorkshops] = useState([])
@@ -109,7 +110,7 @@ export default function Workshops({ user, onToast }) {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm(t('wsh.confirm'))) return
+    if (!await confirmar(t('wsh.confirm'))) return
     try { await deleteWorkshop(id); onToast(t('wsh.deleted')); load() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }

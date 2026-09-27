@@ -1,7 +1,68 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, createContext, useContext } from 'react'
 import { CheckCircle, Clock, AlertTriangle, X } from 'lucide-react'
 import { theme, css, FONT } from '../lib/theme.js'
 import { t } from '../lib/i18n.js'
+
+/* ─────────────────────────────────────────────────────────────
+   Preguntar antes de lo que no se puede deshacer
+
+   Lo hacía el confirm() del navegador: tipografía del sistema,
+   botones del sistema y el nombre del servidor arriba, en medio de
+   una interfaz donde todo lo demás está cuidado al píxel.
+
+   Vive en un proveedor y no en cada pantalla para no tener que
+   colgar un modal en cada una: se pide la función con useConfirm()
+   y se espera su respuesta.
+
+       const confirmar = useConfirm()
+       if (!await confirmar(t('todo.confirm', { title }))) return
+
+   Fuera del proveedor —los tests, el banco de pruebas— cae al
+   confirm() de siempre, que es exactamente lo que había antes. */
+
+const ConfirmCtx = createContext(null)
+
+export function ConfirmProvider({ children }) {
+  const [pregunta, setPregunta] = useState(null)
+
+  const confirmar = useCallback((mensaje, opciones = {}) => (
+    new Promise(resolve => setPregunta({ mensaje, ...opciones, resolve }))
+  ), [])
+
+  const responder = (valor) => {
+    pregunta?.resolve(valor)
+    setPregunta(null)
+  }
+
+  /* Casi todo lo que se pregunta es un borrado, así que el botón va
+     en rojo salvo que se diga lo contrario. */
+  const peligro = pregunta?.peligro !== false
+
+  return (
+    <ConfirmCtx.Provider value={confirmar}>
+      {children}
+      <Modal open={!!pregunta} onClose={() => responder(false)} title={t('common.confirmTitle')}>
+        <p style={{
+          fontSize: 13.5, lineHeight: 1.55, color: theme.text, margin: '2px 0 20px',
+        }}>{pregunta?.mensaje}</p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={() => responder(false)} style={css.btnOutline}>
+            {t('common.cancel')}
+          </button>
+          <button onClick={() => responder(true)}
+            style={peligro ? css.btn(theme.red, '#fff') : css.btn()}>
+            {pregunta?.ok || t('common.confirm')}
+          </button>
+        </div>
+      </Modal>
+    </ConfirmCtx.Provider>
+  )
+}
+
+export function useConfirm() {
+  const desdeArriba = useContext(ConfirmCtx)
+  return desdeArriba || (async (mensaje) => window.confirm(mensaje))
+}
 
 /* ── Cabecera de sección ──────────────────────────────────────
    Filete grueso arriba, titular en Archivo Black y metadato en

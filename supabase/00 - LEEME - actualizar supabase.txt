@@ -1,6 +1,6 @@
 ═══════════════════════════════════════════════════════════════
  PIBES MECÁNICOS · ACTUALIZAR LA BASE DE DATOS
- Migraciones 16, 17 y 18
+ Migraciones 16, 17, 18 y 19
 ═══════════════════════════════════════════════════════════════
 
 LO ÚLTIMO QUE HAY QUE APLICAR
@@ -10,8 +10,27 @@ Tres ficheros, en este orden:
   supabase/16 - migration-piezas-por-eje.sql
   supabase/17 - migration-modo-mantenimiento.sql
   supabase/18 - migration-mantener-despierta.sql
+  supabase/19 - migration-indices-claves-ajenas.sql
 
-Las tres se pueden ejecutar dos veces sin romper nada.
+Las cuatro se pueden ejecutar dos veces sin romper nada.
+
+
+¿EMPIEZAS DE CERO? NO HACE FALTA NADA DE ESTO
+─────────────────────────────────────────────
+Si la base está vacía —un proyecto nuevo, o alguien que quiere
+montarse la aplicación por su cuenta— no hay que pasar por las
+diecinueve migraciones. Basta con un fichero:
+
+  supabase/schema-completo.sql
+
+Se pega entero en el SQL Editor y ya está: las dieciséis tablas
+con sus índices, sus permisos, el modo mantenimiento apagado, el
+interruptor de la base despierta encendido y un usuario «admin»
+con PIN 1234. Lleva las instrucciones en la cabecera.
+
+Está comprobado que deja exactamente el mismo esquema que aplicar
+las diecinueve migraciones en orden: mismas tablas y mismas
+columnas, una por una.
 
 
 LA 16 — LAS PIEZAS QUE VAN POR EJE
@@ -85,6 +104,13 @@ del interruptor ya es una consulta. Apagarlo desde el panel deja
 de hacer el SELECT, pero si lo que quieres es que la base no
 reciba NADA, hay que desactivar el workflow en GitHub
 (Actions → Mantener la base despierta → Disable workflow).
+
+
+LA 19 — LOS ÍNDICES QUE FALTABAN
+────────────────────────────────
+Ocho claves ajenas estaban sin índice; las señaló el analizador de
+rendimiento de Supabase. Con los datos de hoy no se nota, pero
+cuesta cuatro líneas y queda hecho.
 
 
 COMPROBAR QUE HAN IDO BIEN
@@ -338,12 +364,12 @@ Fichero equivalente en SQL:
   supabase/13 - migration-user-preferences.sql
 
 Sobre la numeración de esta carpeta:
-  Los ficheros van con dos cifras (01, 02, ... 18) para que el
+  Los ficheros van con dos cifras (01, 02, ... 19) para que el
   explorador los ordene de verdad. Sin el cero delante, "10" se
   colaba justo detrás de "1" y "2" aparecía después de "13".
-  Al añadir una migración nueva, sigue la cuenta: 19, 20...
+  Al añadir una migración nueva, sigue la cuenta: 20, 21...
 
-  schema-completo.sql   esquema entero, para empezar de cero
+  schema-completo.sql   EL INSTALADOR: la base entera de una vez
   migration-grants.sql  la versión sin numerar de la 15, anterior
                         al correo de Supabase. Se queda por
                         historia: lo que hay que ejecutar es la 15.

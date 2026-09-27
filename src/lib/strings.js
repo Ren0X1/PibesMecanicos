@@ -18,6 +18,8 @@ export const STRINGS = {
   // ══════════════════════════ COMÚN ══════════════════════════
   'common.save':        { en: 'Save', es: 'Guardar', zh: '保存', de: 'Speichern', fr: 'Enregistrer', ru: 'Сохранить' },
   'common.saving':      { en: 'Saving', es: 'Guardando', zh: '保存中', de: 'Wird gespeichert', fr: 'Enregistrement', ru: 'Сохранение' },
+  'common.confirmTitle':{ en: 'Are you sure?', es: '¿Seguro?', zh: '确定吗？', de: 'Sicher?', fr: 'Tu es sûr ?', ru: 'Уверены?' },
+  'common.confirm':     { en: 'Confirm', es: 'Confirmar', zh: '确定', de: 'Bestätigen', fr: 'Confirmer', ru: 'Подтвердить' },
   'common.cancel':      { en: 'Cancel', es: 'Cancelar', zh: '取消', de: 'Abbrechen', fr: 'Annuler', ru: 'Отмена' },
   'common.delete':      { en: 'Delete', es: 'Eliminar', zh: '删除', de: 'Löschen', fr: 'Supprimer', ru: 'Удалить' },
   'common.edit':        { en: 'Edit', es: 'Editar', zh: '编辑', de: 'Bearbeiten', fr: 'Modifier', ru: 'Изменить' },
@@ -194,6 +196,7 @@ export const STRINGS = {
   'stats.byVehicle':    { en: 'Spend by vehicle', es: 'Gasto por vehículo', zh: '各车花费', de: 'Ausgaben pro Fahrzeug', fr: 'Dépense par véhicule', ru: 'Расходы по машинам' },
   'stats.monthly':      { en: 'Monthly spend (all vehicles)', es: 'Gastos mensuales (todos los vehículos)', zh: '每月花费（全部车辆）', de: 'Monatliche Ausgaben (alle Fahrzeuge)', fr: 'Dépenses mensuelles (tous véhicules)', ru: 'Расходы по месяцам (все машины)' },
   'stats.distribution': { en: 'Spend split by vehicle', es: 'Distribución del gasto por vehículo', zh: '各车花费占比', de: 'Ausgabenverteilung nach Fahrzeug', fr: 'Répartition des dépenses par véhicule', ru: 'Распределение расходов по машинам' },
+  'stats.costPer100':  { en: 'Cost / 100 km', es: 'Coste / 100 km', zh: '每 100 公里花费', de: 'Kosten / 100 km', fr: 'Coût / 100 km', ru: 'Стоимость / 100 км' },
   'stats.costPerKm':    { en: 'Cost/km', es: 'Coste/km', zh: '每公里成本', de: 'Kosten/km', fr: 'Coût/km', ru: 'Цена/км' },
   'stats.attention':    { en: 'Needs attention', es: 'Requiere atención', zh: '需要处理', de: 'Braucht Aufmerksamkeit', fr: 'À surveiller', ru: 'Требует внимания' },
   'stats.allGood':      { en: 'Everything up to date', es: 'Todo al día', zh: '一切正常', de: 'Alles aktuell', fr: 'Tout est à jour', ru: 'Всё в порядке' },

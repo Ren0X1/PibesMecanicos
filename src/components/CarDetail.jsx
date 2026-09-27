@@ -38,6 +38,10 @@ function TabBar({ tabs, active, onChange, isMobile }) {
   // On mobile, lay tabs out in a grid so they're ALL visible (no horizontal scroll).
   // <=4 tabs -> single row; more -> 3 columns wrapping into rows.
   const cols = tabs.length <= 4 ? tabs.length : 3
+  /* Desde la sexta pestaña el rótulo largo no cabe y se cortaba
+     («Mantenimie…»). Se aprieta el botón en vez de acortar la
+     palabra: sigue leyéndose entera. */
+  const apretado = !isMobile && tabs.length > 5
   return (
     <div style={{
       marginBottom: 16, background: theme.bg, borderRadius: 0, padding: 4,
@@ -47,13 +51,13 @@ function TabBar({ tabs, active, onChange, isMobile }) {
     }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{
-          display: 'flex', alignItems: 'center', gap: isMobile ? 4 : 6,
+          display: 'flex', alignItems: 'center', gap: isMobile ? 4 : (apretado ? 5 : 6),
           flex: isMobile ? undefined : 1, justifyContent: 'center',
           background: active === t.id ? theme.card : 'transparent',
           color: active === t.id ? theme.white : theme.muted,
           border: active === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-          borderRadius: 0, padding: isMobile ? '9px 6px' : '9px 16px', cursor: 'pointer', fontWeight: 600,
-          fontSize: isMobile ? 12 : 13, fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
+          borderRadius: 0, padding: isMobile ? '9px 6px' : (apretado ? '9px 8px' : '9px 16px'), cursor: 'pointer', fontWeight: 600,
+          fontSize: isMobile ? 12 : (apretado ? 12.5 : 13), fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
           whiteSpace: 'nowrap', minWidth: 0,
         }}>
           {t.icon}

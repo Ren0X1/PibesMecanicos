@@ -26,7 +26,10 @@ function getTimeout(fails) {
   return 300 // 5 min como máximo
 }
 
-export default function Login({ onLogin }) {
+/* `sinDemo` quita la puerta de la demo. Se usa cuando la web está
+   en mantenimiento: si no, entrar en la demo sería saltarse el
+   cartel de «cerrado» por la puerta de atrás. */
+export default function Login({ onLogin, sinDemo = false }) {
   useLang()
   const [username, setUsername] = useState('')
   const [pin, setPin] = useState('')
@@ -180,6 +183,7 @@ export default function Login({ onLogin }) {
         </div>
 
         {/* Acceso a la demo: sin cuenta y sin base de datos */}
+        {!sinDemo && (
         <div style={{ borderTop: `1px solid ${theme.border}`, marginTop: 26, paddingTop: 18 }}>
           <p style={{
             ...css.lbl, textTransform: 'none', letterSpacing: '0.02em',
@@ -195,6 +199,7 @@ export default function Login({ onLogin }) {
             <FlaskConical size={13} /> {t('login.demoBtn')} <ArrowRight size={13} />
           </button>
         </div>
+        )}
       </div>
       </div>
       <Footer />

@@ -80,7 +80,7 @@ describe('la maqueta ancha se pinta', () => {
   it('Resumen · la columna lleva lo que requiere atención', async () => {
     const html = await render(<UserStats user={demo.getDemoUser()} onToast={noop} />)
     expect(html).toContain(t('stats.attention'))
-    expect(html).toContain(t('stats.costPerKm'))
+    expect(html).toContain(t('stats.costPer100'))
   })
 
   it('Avisos · las tres cajas', async () => {

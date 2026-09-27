@@ -6,7 +6,7 @@ import { t, useLang, fmtNum, fmtAgo } from '../lib/i18n.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords, getPendingGroups, approveGroup, rejectGroup, getMaintenanceMode, setMaintenanceMode, getKeepAlive, setKeepAlive } from '../lib/api.js'
 import { getMaintStatus, formatDate } from '../lib/constants.js'
-import { Modal, Field, Loader, Stat } from './ui.jsx'
+import { Modal, Field, Loader, Stat, useConfirm } from './ui.jsx'
 import { useTwoCol, Panel, Row, AttentionList } from './TwoColumn.jsx'
 
 
@@ -34,6 +34,7 @@ export default function AdminPanel({ user, onToast, onMaintenanceChange, initial
   const [mmodeBusy, setMmodeBusy] = useState(false)
   const [keep, setKeep] = useState({ on: false, everyHours: 6, lastPingAt: null })
   const [keepBusy, setKeepBusy] = useState(false)
+  const confirmar = useConfirm()
 
   const loadAll = async () => {
     try {
@@ -76,13 +77,13 @@ export default function AdminPanel({ user, onToast, onMaintenanceChange, initial
   }
 
   const handleDelete = async (id, name) => {
-    if (!confirm(t('adm.deleteUser', { name }))) return
+    if (!await confirmar(t('adm.deleteUser', { name }))) return
     try { await deleteProfile(id); onToast(t('adm.userDeleted')); loadAll() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
   const handleForcePin = async (id, name) => {
-    if (!confirm(t('adm.forcePin', { name }))) return
+    if (!await confirmar(t('adm.forcePin', { name }))) return
     try { await updateProfile(id, { pin_change_required: true }); onToast(t('adm.forcePinDone', { name })); loadAll() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
@@ -124,7 +125,7 @@ export default function AdminPanel({ user, onToast, onMaintenanceChange, initial
   }
 
   const handleRejectGroup = async (g) => {
-    if (!confirm(t('adm.rejectConfirm', { name: g.name }))) return
+    if (!await confirmar(t('adm.rejectConfirm', { name: g.name }))) return
     try { await rejectGroup(g.id); onToast(t('adm.reqRejected')); loadAll() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }

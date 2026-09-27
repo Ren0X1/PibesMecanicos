@@ -4,7 +4,7 @@ import { theme, css, FONT } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts, getItvRecords } from '../lib/api.js'
 import { FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, MAINT_TYPES, getMaintStatus, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
-import { Modal, Field, Loader, ResponsiveGrid2, NumInput, SectionHead, Gauge } from './ui.jsx'
+import { Modal, Field, Loader, ResponsiveGrid2, NumInput, SectionHead, Gauge, useConfirm } from './ui.jsx'
 import { useMediaQuery } from '../lib/useTouch.js'
 import DesktopGarage from './DesktopGarage.jsx'
 import { t, useLang, fmtNum } from '../lib/i18n.js'
@@ -238,8 +238,9 @@ export default function Dashboard({ user, onToast }) {
     } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
 
+  const confirmar = useConfirm()
   const handleDeleteCar = async (id) => {
-    if (!confirm(t('dash.deleteConfirm'))) return
+    if (!await confirmar(t('dash.deleteConfirm'))) return
     try { await deleteCar(id); onToast(t('dash.deleted')); loadCars() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }

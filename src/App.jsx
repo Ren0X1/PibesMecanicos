@@ -2,11 +2,16 @@ import { useState, useCallback, useEffect } from 'react'
 import { theme, css, getThemeMode, setThemeMode, onThemeChange } from './lib/theme.js'
 import { useIsMobile } from './lib/useIsMobile.js'
 import { updateProfile, getDemoUser, getMaintenanceMode } from './lib/api.js'
+/* A propósito desde la implementación real y no desde la fachada:
+   el interruptor de la web se pregunta SIEMPRE a Supabase, también
+   estando en /demo. Si no, entrar en la demo sería saltarse el
+   cartel de «cerrado». */
+import { getMaintenanceMode as getMaintenanceModeReal } from './lib/supabase.js'
 import { isDemo, onDemoChange, exitDemo } from './lib/demo/mode.js'
 import { t, useLang, onLangChange } from './lib/i18n.js'
 import { needsOnboarding, adoptProfilePrefs } from './lib/prefs.js'
 import { Onboarding, SettingsModal } from './components/Preferences.jsx'
-import { Toast, Modal, Field } from './components/ui.jsx'
+import { Toast, Modal, Field, ConfirmProvider } from './components/ui.jsx'
 import Login from './components/Login.jsx'
 import Nav from './components/Nav.jsx'
 import DemoBanner from './components/DemoBanner.jsx'
@@ -84,7 +89,17 @@ function PinChangeModal({ user, onDone }) {
   )
 }
 
+/* El proveedor de «¿seguro?» envuelve todo, incluidos el acceso y
+   el muro de mantenimiento: cualquier pantalla puede preguntar. */
 export default function App() {
+  return (
+    <ConfirmProvider>
+      <Aplicacion />
+    </ConfirmProvider>
+  )
+}
+
+function Aplicacion() {
   const [demo, setDemo] = useState(isDemo())
   const [currentUser, setCurrentUser] = useState(() => {
     if (isDemo()) return getDemoUser()
@@ -102,6 +117,8 @@ export default function App() {
      cae porque no puede preguntar si está caída sería peor que el
      problema que viene a resolver. */
   const [mmode, setMmode] = useState({ on: false, message: '' })
+  /* El de la base de verdad, que manda sobre todo lo demás. */
+  const [mmodeReal, setMmodeReal] = useState({ on: false, message: '' })
   const isMobile = useIsMobile()
   useLang()
 
@@ -117,6 +134,10 @@ export default function App() {
         const estado = await getMaintenanceMode()
         if (vivo) setMmode(estado)
       } catch { /* si no se puede preguntar, se sigue como siempre */ }
+      try {
+        const real = await getMaintenanceModeReal()
+        if (vivo) setMmodeReal(real)
+      } catch { /* lo mismo: mejor abierto que roto */ }
     }
     mirar()
     const id = setInterval(mirar, 60000)
@@ -174,13 +195,20 @@ export default function App() {
 
   /* La web apagada. El administrador pasa —es quien tiene que
      apagarla y encenderla— y los demás ven el aviso. Sin sesión
-     también se ve el aviso, con una puerta pequeña para entrar. */
-  const esAdmin = currentUser?.role === 'admin'
-  if (mmode.on && !esAdmin) {
+     también se ve el aviso, con una puerta pequeña para entrar.
+
+     El administrador de la demo NO es administrador de la web: en
+     la demo el rol es de mentira, como todo lo demás. Por eso, si
+     el interruptor de verdad está puesto, el cartel tapa también
+     la demo. */
+  const esAdmin = !demo && currentUser?.role === 'admin'
+  const apagadaDeVerdad = mmodeReal.on && !esAdmin
+  const apagadaEnLaDemo = demo && mmode.on && currentUser?.role !== 'admin'
+  if (apagadaDeVerdad || apagadaEnLaDemo) {
     return (
       <MaintenanceWall
         user={currentUser}
-        message={mmode.message}
+        message={(apagadaDeVerdad ? mmodeReal.message : mmode.message)}
         onLogin={handleLogin}
         onLogout={handleLogout}
       />
@@ -210,7 +238,7 @@ export default function App() {
       display: 'flex', flexDirection: 'column',
       paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0) + 72px)' : 0,
     }}>
-      {mmode.on && esAdmin && (
+      {((mmodeReal.on && esAdmin) || (demo && mmode.on)) && (
         <MaintenanceBanner stacked={demo}
           onGoPanel={() => { setAdminTab('site'); setView('admin') }} />
       )}

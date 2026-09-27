@@ -105,6 +105,14 @@ vigilan: uno busca claves repetidas y otro busca castellano suelto
 en las pantallas. Si el segundo te salta, la solución es una clave
 nueva, no una excepción en el test.
 
+### 4 bis. Nada de confirm() del navegador
+
+Preguntar «¿seguro?» se hace con `useConfirm()` de `ui.jsx`, que
+devuelve una promesa y pinta el modal de la casa. El `confirm()`
+del navegador sale con el tipo del sistema y el nombre del
+servidor encima, en medio de una interfaz cuidada al píxel. Había
+doce; no queda ninguno.
+
 ### 5. Las gráficas son de área y solo hay una
 
 `AreaChart.jsx`. Se quitó `recharts` del proyecto entero (el
@@ -165,6 +173,18 @@ entra como siempre**: una web caída por no poder preguntar si
 está caída sería peor que el problema que viene a resolver. No lo
 cambies a «cerrado por si acaso».
 
+### 8 bis. La demo no es la puerta de atrás
+
+El interruptor de mantenimiento se pregunta **siempre a Supabase**,
+también estando en `/demo`: por eso `App.jsx` importa
+`getMaintenanceMode` de `supabase.js` y no de la fachada. Con la
+web apagada, entrar en la demo era saltarse el cartel de
+«cerrado». Y el acceso que ofrece el muro va con `sinDemo`, que
+quita ese botón del formulario.
+
+El administrador **de la demo no es administrador de la web**: su
+rol es de mentira, como el resto de la demo.
+
 ### 9. Que la base no se duerma
 
 Un proyecto de Supabase sin consultas se pausa solo. Quien lo
@@ -194,7 +214,7 @@ solo aparecía al pintar el componente.
 
 De ahí salieron las dos herramientas que hay:
 
-**Los tests** (`npm test`, 169). Montan cada pantalla de verdad,
+**Los tests** (`npm test`, 173). Montan cada pantalla de verdad,
 en los seis idiomas, en los dos temas y —en `wide.test.jsx`— con
 `matchMedia` diciendo que sí, que es la única forma de probar la
 mitad ancha del código.

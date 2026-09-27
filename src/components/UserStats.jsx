@@ -234,10 +234,10 @@ export default function UserStats({ user, onToast }) {
                   <AttentionList items={attention} empty={t('stats.allGood')} />
                 </Panel>
 
-                <Panel title={t('stats.costPerKm')}>
+                <Panel title={t('stats.costPer100')}>
                   <Figure
                     label={t('stats.fleetCost')}
-                    value={stats.totalKm > 0 ? fmtMoney(stats.grandTotal / stats.totalKm, 2) : '—'}
+                    value={stats.totalKm > 0 ? fmtMoney((stats.grandTotal / stats.totalKm) * 100, 2) : '—'}
                     note={`${fmtMoney(stats.grandTotal)} · ${fmtNum(stats.totalKm)} ${t('common.km')}`}
                   />
                   <div style={{ marginTop: 12 }}>
@@ -245,7 +245,7 @@ export default function UserStats({ user, onToast }) {
                       <Row
                         key={v.id}
                         label={v.plate}
-                        value={v.km > 0 ? fmtMoney(v.total / v.km, 2) : '—'}
+                        value={v.km > 0 ? fmtMoney((v.total / v.km) * 100, 2) : '—'}
                       />
                     ))}
                   </div>
@@ -280,7 +280,7 @@ export default function UserStats({ user, onToast }) {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                     <thead>
                       <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                        {[t('common.vehicle'), t('common.plate'), t('common.km'), t('common.maintenance'), t('common.fuel'), t('common.total'), t('stats.costPerKm')].map((h, i) =>
+                        {[t('common.vehicle'), t('common.plate'), t('common.km'), t('common.maintenance'), t('common.fuel'), t('common.total'), t('stats.costPer100')].map((h, i) =>
                           <th key={i} style={{ ...css.th, textAlign: i >= 2 ? 'right' : 'left' }}>{h}</th>
                         )}
                       </tr>
@@ -295,7 +295,7 @@ export default function UserStats({ user, onToast }) {
                           <td style={{ ...css.td, ...css.num, textAlign: 'right', color: theme.green }}>{fmtMoney(v.fuel)}</td>
                           <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700 }}>{fmtMoney(v.total)}</td>
                           <td style={{ ...css.td, ...css.num, textAlign: 'right', color: theme.muted }}>
-                            {v.km > 0 ? fmtMoney(v.total / v.km, 2) : '—'}
+                            {v.km > 0 ? fmtMoney((v.total / v.km) * 100, 2) : '—'}
                           </td>
                         </tr>
                       ))}
@@ -306,7 +306,7 @@ export default function UserStats({ user, onToast }) {
                         <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700, color: theme.green }}>{fmtMoney(stats.totalFuel)}</td>
                         <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700, color: theme.white }}>{fmtMoney(stats.grandTotal)}</td>
                         <td style={{ ...css.td, ...css.num, textAlign: 'right', fontWeight: 700, color: theme.muted }}>
-                          {stats.totalKm > 0 ? fmtMoney(stats.grandTotal / stats.totalKm, 2) : '—'}
+                          {stats.totalKm > 0 ? fmtMoney((stats.grandTotal / stats.totalKm) * 100, 2) : '—'}
                         </td>
                       </tr>
                     </tbody>

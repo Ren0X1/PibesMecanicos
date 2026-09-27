@@ -4,7 +4,7 @@ import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getReminders, createReminder, updateReminder, deleteReminder, getCars, getMaintenanceRecords, getItvRecords } from '../lib/api.js'
 import { formatDate, getMaintStatus, MAINT_TYPES, maintLabel } from '../lib/constants.js'
-import { Modal, Field, Loader, DateInput } from './ui.jsx'
+import { Modal, Field, Loader, DateInput, useConfirm } from './ui.jsx'
 import { t, useLang } from '../lib/i18n.js'
 import TwoColumn, { Panel, Row, AttentionList } from './TwoColumn.jsx'
 
@@ -187,6 +187,7 @@ async function vehicleDue(cars) {
 
 export default function Reminders({ user, onToast }) {
   useLang()
+  const confirmar = useConfirm()
   const mob = useIsMobile()
   const [reminders, setReminders] = useState([])
   const [cars, setCars] = useState([])
@@ -239,7 +240,7 @@ export default function Reminders({ user, onToast }) {
   }
 
   const handleDelete = async (r) => {
-    if (!confirm(t('rem.confirm', { title: r.title }))) return
+    if (!await confirmar(t('rem.confirm', { title: r.title }))) return
     try { await deleteReminder(r.id); onToast(t('common.deleted')); load() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }

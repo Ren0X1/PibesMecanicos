@@ -5,6 +5,7 @@ import { useIsMobile } from '../lib/useIsMobile.js'
 import { resetDemo } from '../lib/api.js'
 import { t, useLang } from '../lib/i18n.js'
 import { exitDemo } from '../lib/demo/mode.js'
+import { useConfirm } from './ui.jsx'
 
 /* Franja permanente en modo demo. Deja claro que los datos son
    inventados y que nada de lo que se toque sale del navegador.
@@ -14,6 +15,7 @@ import { exitDemo } from '../lib/demo/mode.js'
    «salir de la demo», y quien quiere irse no la encuentra. */
 export default function DemoBanner({ onReset }) {
   useLang()
+  const confirmar = useConfirm()
   const mob = useIsMobile()
   const [busy, setBusy] = useState(false)
 
@@ -24,16 +26,16 @@ export default function DemoBanner({ onReset }) {
     return () => document.documentElement.style.removeProperty('--pm-banner')
   }, [])
 
-  const handleReset = () => {
-    if (!confirm(t('demo.resetConfirm'))) return
+  const handleReset = async () => {
+    if (!await confirmar(t('demo.resetConfirm'))) return
     setBusy(true)
     resetDemo()
     onReset?.()
     setBusy(false)
   }
 
-  const handleExit = () => {
-    if (!confirm(t('demo.exitConfirm'))) return
+  const handleExit = async () => {
+    if (!await confirmar(t('demo.exitConfirm'))) return
     exitDemo()
   }
 

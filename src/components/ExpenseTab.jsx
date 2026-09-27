@@ -88,7 +88,12 @@ export default function ExpenseTab({ maintenance, fuelLogs, jobs = [], vehicleTy
         <Stat icon={<Euro size={18} color={theme.accent} />} label={t('common.maintenance')} value={`${totalMaint.toFixed(0)}€`} color={theme.accent} />
         <Stat icon={<Euro size={18} color={theme.green} />} label={t('common.fuel')} value={`${totalFuel.toFixed(0)}€`} color={theme.green} />
         <Stat icon={<TrendingUp size={18} color={theme.muted} />} label={t('exp.thisYear')} value={`${thisYear.toFixed(0)}€`} color={theme.muted} />
-        <Stat icon={<Gauge size={18} color={theme.red} />} label={t('stats.costPerKm')} value={currentKm > 0 && grandTotal > 0 ? `${(grandTotal / currentKm).toFixed(2)}€` : '-'} color={theme.red} />
+        {/* Por kilómetro salía «0,00 €» en cuanto el coche tenía
+            kilómetros: con dos decimales no cabe nada. Cada 100 km
+            se lee y se compara. */}
+        <Stat icon={<Gauge size={18} color={theme.red} />} label={t('stats.costPer100')}
+          value={currentKm > 0 && grandTotal > 0 ? fmtMoney((grandTotal / currentKm) * 100, 2) : '—'}
+          color={theme.red} />
       </div>
 
       {/* Monthly bar chart */}
