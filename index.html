@@ -2,7 +2,11 @@
 <html lang="es" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- viewport-fit=cover es lo que hace que env(safe-area-inset-*)
+         devuelva algo en un iPhone con notch. Sin él, la reserva que
+         hacen la barra de abajo y las cabeceras vale cero y el
+         contenido se pega al reloj y al indicador de inicio. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#121213" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

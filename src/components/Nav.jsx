@@ -61,6 +61,10 @@ export default function Nav({ user, view, setView, onLogout, dataVersion, onTogg
         <header style={{
           background: theme.card, borderBottom: `1px solid ${theme.border}`,
           position: 'sticky', top: 0, zIndex: 100,
+          /* Instalada en un iPhone, la barra de estado se dibuja
+             ENCIMA de la página: sin esta reserva el logo sale
+             debajo del reloj. */
+          paddingTop: 'env(safe-area-inset-top, 0)',
         }}>
           <div style={{ ...css.flexBetween, height: 52, padding: '0 14px' }}>
             <Brand size={26} fontSize={13} />
@@ -116,6 +120,7 @@ export default function Nav({ user, view, setView, onLogout, dataVersion, onTogg
     <header style={{
       background: theme.card, borderBottom: `1px solid ${theme.border}`,
       position: 'sticky', top: 0, zIndex: 100,
+      paddingTop: 'env(safe-area-inset-top, 0)',
     }}>
       <div style={{ ...css.container, ...css.flexBetween, height: 54, gap: 14 }}>
         <Brand />

@@ -145,7 +145,14 @@ export function setThemeMode(m) {
 export const css = {
   /* El ancho lo fija --pm-max en index.html; así la barra superior y
      el contenido crecen a la vez y quedan alineados. */
-  get container() { return { width: '100%', maxWidth: 'var(--pm-max)', margin: '0 auto', padding: '0 20px' } },
+  get container() { return {
+    width: '100%', maxWidth: 'var(--pm-max)', margin: '0 auto',
+    /* En un iPhone de lado, el notch se come el borde: los 20 px
+       de siempre salvo que la muesca pida más. En cualquier otro
+       sitio env() vale cero y quedan los 20 de toda la vida. */
+    paddingLeft: 'max(20px, env(safe-area-inset-left, 0px))',
+    paddingRight: 'max(20px, env(safe-area-inset-right, 0px))',
+  } },
   get flex() { return { display: 'flex', alignItems: 'center', gap: 8 } },
   get flexBetween() { return { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
 
