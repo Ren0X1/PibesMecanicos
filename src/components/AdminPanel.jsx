@@ -152,7 +152,7 @@ export default function AdminPanel({ user, onToast, onMaintenanceChange, initial
   /* Encender la web es inmediato; apagarla se pregunta antes, que
      deja fuera a todo el mundo. */
   const cambiarMmode = async (encender) => {
-    if (encender && !confirm(t('mmode.confirmOn'))) return
+    if (encender && !await confirmar(t('mmode.confirmOn'), { peligro: false })) return
     setMmodeBusy(true)
     try {
       const estado = await setMaintenanceMode({
