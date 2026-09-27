@@ -3,3 +3,6 @@ dist
 .env
 .env.local
 *.log
+
+# Configuración local de los servidores MCP (herramienta, no proyecto)
+.mcp.json
