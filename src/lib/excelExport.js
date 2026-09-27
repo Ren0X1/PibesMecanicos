@@ -1,6 +1,6 @@
 import { t } from './i18n.js'
 import ExcelJS from 'exceljs'
-import { getMaintStatus, formatDate, getMaintenanceForVehicle, driveLabel } from './constants.js'
+import { getMaintStatus, formatDate, getMaintenanceForVehicle, driveLabel, maintName, hasSides, hasSideData, SIDES, sideLabel } from './constants.js'
 
 // ─── Color palette (ARGB hex) ───
 const C = {
@@ -74,13 +74,14 @@ function styleHeaderRow(row, color) {
   row.height = 26
 }
 
-export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords = [], todos = [] }) {
+export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords = [], todos = [], jobs = [] }) {
   const wb = new ExcelJS.Workbook()
   wb.creator = 'Pibes Mecánicos'
   wb.created = new Date()
   const today = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
 
   const totalMaintCost = maintenance.reduce((s, m) => s + +(m.cost || 0), 0)
+    + jobs.reduce((s, j) => s + +(j.cost || 0), 0)
   const totalFuelCost = fuelLogs.reduce((s, f) => s + +(f.total_cost || 0), 0)
   const grandTotal = totalMaintCost + totalFuelCost
   const totalLiters = fuelLogs.reduce((s, f) => s + +(f.liters || 0), 0)
@@ -206,12 +207,34 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
     const m = maintenance.find(x => x.type_id === mt.id)
     const status = m ? getMaintStatus(m, car.current_km) : null
     const statusText = !m ? '—' : status === 'ok' ? t('status.ok') : status === 'warn' ? t('status.warn') : t('status.overdue')
+    /* En una hoja de cálculo un número tiene que seguir siendo un
+       número, así que el lado se dice en el nombre del elemento y la
+       columna de km sigue llevando solo la cifra del que manda. */
+    const conLados = hasSides(mt, car.vehicle_type) && hasSideData(m)
+    const nombre = maintName(mt, car.vehicle_type)
     const row = ws2.addRow([
-      mt.name, statusText,
+      nombre, statusText,
       m && m.last_km ? m.last_km : '', m && m.last_date ? formatDate(m.last_date) : '',
       m && m.next_km ? m.next_km : '', m && m.next_date ? formatDate(m.next_date) : '',
       m && m.cost ? +(+m.cost).toFixed(2) : '', m?.notes || '',
     ])
+    if (conLados) {
+      SIDES.forEach(lado => {
+        const km = m[`last_km_${lado}`]
+        const fecha = m[`last_date_${lado}`]
+        const fila = ws2.addRow([
+          `   ${sideLabel(lado)}`, '',
+          km != null ? km : '', fecha ? formatDate(fecha) : '',
+          '', '', '', '',
+        ])
+        fila.eachCell((cell, col) => {
+          cell.border = thinBorder
+          cell.font = { name: 'Calibri', size: 9, italic: true, color: { argb: C.muted } }
+          if (col === 3) { cell.alignment = { vertical: 'middle', horizontal: 'right' }; if (cell.value) cell.numFmt = '#,##0 "km"' }
+          if (col === 4) cell.alignment = { vertical: 'middle', horizontal: 'center' }
+        })
+      })
+    }
     const alt = idx % 2 === 1
     row.eachCell((cell, col) => {
       cell.border = thinBorder
@@ -234,6 +257,34 @@ export async function exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts
       row.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' }
     }
   })
+
+  /* Los trabajos libres, debajo y con su propia cabecera: van en la
+     misma hoja porque son gasto de taller, pero no son un elemento
+     de la lista y no tienen próximo. */
+  if (jobs.length > 0) {
+    ws2.addRow([])
+    const jh = ws2.addRow([t('job.tab'), t('common.date'), t('car.tabKm'), '', '', '', t('rep.costEur'), t('common.notes')])
+    styleHeaderRow(jh, C.blue)
+    ;[...jobs]
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+      .forEach((j, idx) => {
+        const row = ws2.addRow([
+          j.name, formatDate(j.date), j.km || 0, '', '', '',
+          j.cost ? +(+j.cost).toFixed(2) : '', j.notes || '',
+        ])
+        const alt = idx % 2 === 1
+        row.eachCell((cell, col) => {
+          cell.border = thinBorder
+          cell.font = { name: 'Calibri', size: 10, color: { argb: C.text } }
+          if (alt) cell.fill = fill(C.light)
+          cell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1, wrapText: true }
+          if (col === 1) cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: C.text } }
+          if (col === 2) cell.alignment = { vertical: 'middle', horizontal: 'center' }
+          if (col === 3) { cell.alignment = { vertical: 'middle', horizontal: 'right' }; if (cell.value) cell.numFmt = '#,##0 "km"' }
+          if (col === 7) { cell.alignment = { vertical: 'middle', horizontal: 'right' }; if (cell.value) cell.numFmt = '#,##0.00 €' }
+        })
+      })
+  }
 
   const m2t = ws2.addRow(['TOTAL', '', '', '', '', '', +totalMaintCost.toFixed(2), ''])
   m2t.eachCell((cell, col) => {

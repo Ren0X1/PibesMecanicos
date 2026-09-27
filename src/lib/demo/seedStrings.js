@@ -30,12 +30,22 @@ export const SEED_STRINGS = {
   'seed.mtOilNote': { en: 'Yamalube 10W40', es: 'Yamalube 10W40', zh: 'Yamalube 10W40', de: 'Yamalube 10W40', fr: 'Yamalube 10W40', ru: 'Yamalube 10W40' },
   'seed.chainNote': { en: 'Greased every 800 km', es: 'Engrasada cada 800 km', zh: '每 800 公里润滑一次', de: 'Alle 800 km gefettet', fr: 'Graissée tous les 800 km', ru: 'Смазка каждые 800 км' },
   'seed.roadNote':  { en: 'Michelin Road 5', es: 'Michelin Road 5', zh: 'Michelin Road 5', de: 'Michelin Road 5', fr: 'Michelin Road 5', ru: 'Michelin Road 5' },
+  'seed.tyreFrontNote': { en: 'Puncture: only the left one was replaced', es: 'Pinchazo: se cambió solo el izquierdo', zh: '扎胎：只换了左侧', de: 'Reifenschaden: nur links gewechselt', fr: 'Crevaison : seul le gauche a été changé', ru: 'Прокол: заменили только левое' },
+  'seed.sbNote':    { en: 'Both wishbone bushings, they were knocking', es: 'Los dos de la tijera, que sonaban', zh: '两侧摆臂衬套，有异响', de: 'Beide Querlenkerbuchsen, sie polterten', fr: 'Les deux silentblocs de triangle, ils cognaient', ru: 'Оба сайлентблока рычага, стучали' },
 
   // ── Recambios ──
   'seed.partOil':   { en: 'Oil filter', es: 'Filtro de aceite', zh: '机油滤清器', de: 'Ölfilter', fr: 'Filtre à huile', ru: 'Масляный фильтр' },
   'seed.partCabin': { en: 'Cabin filter', es: 'Filtro de habitáculo', zh: '空调滤芯', de: 'Innenraumfilter', fr: 'Filtre habitacle', ru: 'Салонный фильтр' },
   'seed.partPads':  { en: 'Front brake pads', es: 'Pastillas delanteras', zh: '前刹车片', de: 'Bremsbeläge vorn', fr: 'Plaquettes avant', ru: 'Передние колодки' },
   'seed.partChain': { en: 'Chain kit', es: 'Kit de arrastre', zh: '链条套件', de: 'Kettenkit', fr: 'Kit chaîne', ru: 'Комплект цепи' },
+  'seed.partTyreF': { en: 'Front tyre', es: 'Neumático delantero', zh: '前轮胎', de: 'Reifen vorn', fr: 'Pneu avant', ru: 'Передняя шина' },
+  'seed.partTyreR': { en: 'Rear tyre', es: 'Neumático trasero', zh: '后轮胎', de: 'Reifen hinten', fr: 'Pneu arrière', ru: 'Задняя шина' },
+
+  // ── Trabajos libres ──
+  'seed.job1':      { en: 'Left ball joint', es: 'Rótula izquierda', zh: '左球头', de: 'Traggelenk links', fr: 'Rotule gauche', ru: 'Левая шаровая' },
+  'seed.job1Note':  { en: 'It was clonking over bumps', es: 'Sonaba al pasar por los baches', zh: '过坎时有异响', de: 'Klackerte über Bodenwellen', fr: 'Elle claquait sur les bosses', ru: 'Стучала на неровностях' },
+  'seed.job2':      { en: 'Weld the exhaust', es: 'Soldar el escape', zh: '焊接排气管', de: 'Auspuff schweißen', fr: 'Souder l’échappement', ru: 'Сварка глушителя' },
+  'seed.job3':      { en: 'New grips', es: 'Puños nuevos', zh: '新手把胶', de: 'Neue Griffe', fr: 'Poignées neuves', ru: 'Новые грипсы' },
 
   // ── ITV ──
   'seed.itvStation': { en: 'Málaga test centre', es: 'ITV Málaga · Guadalhorce', zh: '马拉加检测站', de: 'Prüfstelle Málaga', fr: 'Centre de contrôle de Málaga', ru: 'Станция ТО, Малага' },

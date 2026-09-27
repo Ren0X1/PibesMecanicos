@@ -4,9 +4,9 @@ import { Euro, TrendingUp, Gauge } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { t, useLang, fmtMoney, fmtMonth } from '../lib/i18n.js'
 import { Stat } from './ui.jsx'
-import { MAINT_TYPES } from '../lib/constants.js'
+import { MAINT_TYPES, maintName } from '../lib/constants.js'
 
-export default function ExpenseTab({ maintenance, fuelLogs, isMobile, currentKm }) {
+export default function ExpenseTab({ maintenance, fuelLogs, jobs = [], vehicleType, isMobile, currentKm }) {
   const { monthlyData, categoryData, totalMaint, totalFuel, grandTotal, thisYear } = useMemo(() => {
     const now = new Date()
     const year = now.getFullYear()
@@ -32,6 +32,18 @@ export default function ExpenseTab({ maintenance, fuelLogs, isMobile, currentKm 
       }
     })
 
+    /* Un trabajo libre es gasto de taller: cuenta en el total de
+       mantenimiento y en su mes, igual que los demás. */
+    jobs.forEach(j => {
+      const cost = +(j.cost || 0)
+      totalMaint += cost
+      if (j.date) {
+        const key = j.date.substring(0, 7)
+        if (months[key]) months[key].maint += cost
+        if (j.date.startsWith(String(year))) thisYearTotal += cost
+      }
+    })
+
     fuelLogs.forEach(f => {
       const cost = +(f.total_cost || 0)
       totalFuel += cost
@@ -46,8 +58,11 @@ export default function ExpenseTab({ maintenance, fuelLogs, isMobile, currentKm 
     const cats = {}
     maintenance.forEach(m => {
       const mt = MAINT_TYPES.find(t => t.id === m.type_id)
-      const name = mt?.name || m.type_id
+      const name = mt ? maintName(mt, vehicleType) : m.type_id
       cats[name] = (cats[name] || 0) + +(m.cost || 0)
+    })
+    jobs.forEach(j => {
+      cats[j.name] = (cats[j.name] || 0) + +(j.cost || 0)
     })
     if (totalFuel > 0) cats[t('common.fuel')] = totalFuel
 
@@ -63,7 +78,7 @@ export default function ExpenseTab({ maintenance, fuelLogs, isMobile, currentKm 
       grandTotal: totalMaint + totalFuel,
       thisYear: thisYearTotal,
     }
-  }, [maintenance, fuelLogs])
+  }, [maintenance, fuelLogs, jobs, vehicleType])
 
   return (
     <div>

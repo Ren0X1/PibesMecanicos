@@ -51,6 +51,8 @@ src/
   components/
     TwoColumn.jsx   la maqueta de dos columnas y sus piezas
     AreaChart.jsx   LA gráfica: no hay otra
+    CarDetail.jsx   la ficha: mantenimientos, ejes, trabajos, recambios
+    MaintenanceWall.jsx  la web apagada, y la tira del administrador
     ...
 supabase/           el esquema y las migraciones, numeradas
 test/               vitest + jsdom
@@ -58,7 +60,7 @@ test/               vitest + jsdom
 
 ---
 
-## Las cinco cosas que hay que saber
+## Las cosas que hay que saber
 
 ### 1. La fachada de datos
 
@@ -108,6 +110,79 @@ nueva, no una excepción en el test.
 `AreaChart.jsx`. Se quitó `recharts` del proyecto entero (el
 paquete bajó 395 kB). Si necesitas enseñar una serie, es esa.
 
+### 6. Las piezas que van por eje
+
+Neumáticos, discos, pastillas, amortiguadores y silentblocks no
+son una pieza: son **dos ejes**, cada uno con su `type_id`
+(`neumaticos_del`, `neumaticos_tras`…) y su `axle`. En un coche
+cada eje tiene dos lados, en las columnas `last_km_izq`,
+`last_date_izq`, `last_km_der` y `last_date_der`.
+
+Tres reglas que no se pueden romper:
+
+- **En moto no hay lados.** Una rueda delante y otra detrás. Lo
+  decide `hasSides(mt, vehicleType)`, nunca el tipo a solas. En
+  moto además cambian el nombre (`nameMoto`: «horquilla») y el
+  intervalo (`defKmMoto`: un trasero son 12.000 km, no 45.000).
+- **El aviso lo manda el lado que peor está.** `last_km` y
+  `last_date` de la fila son los de ese lado, y por eso el resto
+  de la aplicación —la tabla, el PDF, el gasto por taller— puede
+  seguir leyéndolos sin saber nada de lados. Si cambias solo el
+  izquierdo, el próximo se recalcula desde el derecho, que sigue
+  siendo el viejo. Eso lo hacen `worstOf()` y `nextFrom()`.
+- **El coste y el recambio son del eje**, no del lado: «los dos
+  delanteros por 180 €», y delante y detrás pueden llevar medidas
+  distintas (`part_id`).
+- **Abrir la ficha no puede reescribir los lados.** Si el eje ya
+  tiene lados apuntados, el formulario entra SIN lado elegido y
+  guardar así los deja como estaban: solo toca coste, taller,
+  recambio y notas. Arrancaba en «los dos» y bastaba abrirlo para
+  enlazar un recambio para perder el lado que se había cambiado
+  aparte. Lo vigila `test/ejeFormulario.test.jsx`.
+
+Un `next_km` a cero **no** es «vencido hace doscientos mil»: es
+una pieza que no se mide en kilómetros (silentblocks, rótulas).
+`getMaintStatus` lo sabe; si tocas esa función, respétalo.
+
+### 7. Lo que no está en la lista: los trabajos libres
+
+`custom_jobs`. Nombre a mano, fecha, km, coste, taller y
+recambio, varias entradas por vehículo y **sin avisos**: es un
+cuaderno. Su coste es gasto de taller y suma donde suman los
+mantenimientos —Gastos, estadísticas, lo gastado por taller y los
+dos exportes—. Si tocas alguno de esos sitios, acuérdate de ellos.
+
+### 8. Modo mantenimiento
+
+`app_settings`, fila `maintenance`. Un administrador lo enciende
+desde su panel («La web») y la aplicación entera pasa a ser
+`MaintenanceWall`: los demás ven un aviso y no pueden tocar nada.
+El administrador sigue entrando —es quien tiene que volver a
+encenderla— y ve una tira amarilla arriba.
+
+Se pregunta al entrar y cada minuto. **Si la consulta falla, se
+entra como siempre**: una web caída por no poder preguntar si
+está caída sería peor que el problema que viene a resolver. No lo
+cambies a «cerrado por si acaso».
+
+### 9. Que la base no se duerma
+
+Un proyecto de Supabase sin consultas se pausa solo. Quien lo
+evita es `.github/workflows/keepalive.yml`: cada seis horas mira
+el ajuste `keepalive` y, si está puesto, hace un SELECT y apunta
+la hora en `keepalive_ping`. Usa los mismos secretos que el
+despliegue.
+
+El interruptor vive en el panel, pestaña «La web», al lado del
+modo mantenimiento, y enseña cuándo fue el último toque; si pasa
+de un día, avisa.
+
+Lo que hay que saber para no llevarse un chasco: **mientras el
+workflow exista, la comprobación del interruptor ya es una
+consulta**. Apagarlo deja de hacer el SELECT, pero para que la
+base no reciba nada hay que desactivar el workflow en GitHub.
+Está dicho en la propia pantalla, así que no lo quites.
+
 ---
 
 ## Verificar de verdad
@@ -119,7 +194,7 @@ solo aparecía al pintar el componente.
 
 De ahí salieron las dos herramientas que hay:
 
-**Los tests** (`npm test`, 110). Montan cada pantalla de verdad,
+**Los tests** (`npm test`, 169). Montan cada pantalla de verdad,
 en los seis idiomas, en los dos temas y —en `wide.test.jsx`— con
 `matchMedia` diciendo que sí, que es la única forma de probar la
 mitad ancha del código.
@@ -134,8 +209,10 @@ para sacarle una captura sin pasar por el acceso:
 /preview.html?screens=stats&hover=0.4&click=Statistics&probe=1
 ```
 
-- `screens=<nombre>` monta solo esa pantalla (`car`, `stats`,
-  `reminders`, `workshops`, `groups`, `expense`, `admin`).
+- `screens=<nombre>` monta solo esa pantalla (`car`, `moto`,
+  `stats`, `reminders`, `workshops`, `groups`, `expense`, `admin`,
+  `mmode`). `moto` es la ficha de la MT-07: es donde se comprueba
+  que un eje sin lados se ve bien.
 - `hover=0..1` señala esa fracción del ancho en todas las gráficas,
   para capturar el estado con el ratón encima.
 - `click=<texto>` pulsa lo que ponga eso: sirve para llegar a una
@@ -164,9 +241,14 @@ aplica la última. **Cada migración nueva lleva el número
 siguiente**, ceros a la izquierda, y se escribe para poder
 ejecutarse dos veces sin romper nada.
 
-La última es la **14**, que añade `workshop_id` a
-`maintenance_records`: es lo que permite decir cuánto se ha
-gastado en cada taller.
+Las últimas son la **15** (permisos de la Data API, por el cambio
+de Supabase del 30 de octubre: cada migración que cree una tabla
+lleva su `GRANT` dentro), la **16** (las piezas por eje, los lados,
+`part_id` y `custom_jobs`), la **17** (`app_settings`, el modo
+mantenimiento) y la **18** (las dos filas de `keepalive`).
+
+La 16 reparte los registros viejos sin perder nada: el coste va
+solo en el eje delantero para que el total de dinero no cambie.
 
 ---
 
@@ -182,7 +264,9 @@ antes de que alguien dé por hecho que sí:
   que se salta recargando;
 - la búsqueda de usuario mete el texto en un `ilike` sin escapar
   los comodines;
-- el rol se puede editar desde el cliente.
+- el rol se puede editar desde el cliente;
+- y el modo mantenimiento se puede apagar con la clave pública,
+  como todo lo demás.
 
 Para un cuaderno de mantenimiento entre amigos es asumible, y el
 autor lo sabe. Arreglarlo es una fase aparte: hashear los PIN,

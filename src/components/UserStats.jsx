@@ -4,7 +4,7 @@ import AreaChart from './AreaChart.jsx'
 import TwoColumn, { useTwoCol, Panel, Figure, Row, AttentionList } from './TwoColumn.jsx'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getCars, getMaintenanceRecords, getFuelLogs, getItvRecords } from '../lib/api.js'
+import { getCars, getMaintenanceRecords, getFuelLogs, getItvRecords, getCustomJobs } from '../lib/api.js'
 import { getMaintStatus, MAINT_TYPES } from '../lib/constants.js'
 import { Stat, Loader } from './ui.jsx'
 import { t, useLang, fmtNum, fmtMoney, fmtMonth } from '../lib/i18n.js'
@@ -30,10 +30,10 @@ export default function UserStats({ user, onToast }) {
       setCars(list)
       const data = {}
       for (const car of list) {
-        const [maint, fuel, itv] = await Promise.all([
-          getMaintenanceRecords(car.id), getFuelLogs(car.id), getItvRecords(car.id)
+        const [maint, fuel, itv, jobs] = await Promise.all([
+          getMaintenanceRecords(car.id), getFuelLogs(car.id), getItvRecords(car.id), getCustomJobs(car.id)
         ])
-        data[car.id] = { maint, fuel, itv }
+        data[car.id] = { maint, fuel, itv, jobs }
       }
       setCarData(data)
     } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
@@ -49,8 +49,11 @@ export default function UserStats({ user, onToast }) {
 
     // Per-vehicle breakdown
     const perVehicle = cars.map(car => {
-      const d = carData[car.id] || { maint: [], fuel: [], itv: [] }
+      const d = carData[car.id] || { maint: [], fuel: [], itv: [], jobs: [] }
+      /* Los trabajos libres son gasto de taller: suman donde suman
+         los mantenimientos. */
       const mCost = d.maint.reduce((s, m) => s + +(m.cost || 0), 0)
+        + (d.jobs || []).reduce((s, j) => s + +(j.cost || 0), 0)
       const fCost = d.fuel.reduce((s, f) => s + +(f.total_cost || 0), 0)
       const liters = d.fuel.reduce((s, f) => s + +(f.liters || 0), 0)
 
@@ -101,11 +104,17 @@ export default function UserStats({ user, onToast }) {
     }
 
     cars.forEach(car => {
-      const d = carData[car.id] || { maint: [], fuel: [] }
+      const d = carData[car.id] || { maint: [], fuel: [], jobs: [] }
       d.maint.forEach(m => {
         if (m.last_date) {
           const k = m.last_date.substring(0, 7)
           if (months[k]) months[k].maint += +(m.cost || 0)
+        }
+      })
+      ;(d.jobs || []).forEach(j => {
+        if (j.date) {
+          const k = j.date.substring(0, 7)
+          if (months[k]) months[k].maint += +(j.cost || 0)
         }
       })
       d.fuel.forEach(f => {

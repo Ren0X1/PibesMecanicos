@@ -3,7 +3,7 @@ import { Bell, Plus, Trash2, Save, Edit2, CheckSquare, Square, ChevronDown, Chev
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getReminders, createReminder, updateReminder, deleteReminder, getCars, getMaintenanceRecords, getItvRecords } from '../lib/api.js'
-import { formatDate, getMaintStatus, MAINT_TYPES } from '../lib/constants.js'
+import { formatDate, getMaintStatus, MAINT_TYPES, maintLabel } from '../lib/constants.js'
 import { Modal, Field, Loader, DateInput } from './ui.jsx'
 import { t, useLang } from '../lib/i18n.js'
 import TwoColumn, { Panel, Row, AttentionList } from './TwoColumn.jsx'
@@ -161,7 +161,7 @@ async function vehicleDue(cars) {
       const tipo = MAINT_TYPES.find(x => x.id === m.type_id)
       out.push({
         key: `${car.id}-${m.type_id}`,
-        title: tipo?.name || m.type_id,
+        title: tipo ? maintLabel(tipo, m, car.vehicle_type) : m.type_id,
         sub: car.plate,
         color: st === 'overdue' ? theme.red : theme.yellow,
         rank: st === 'overdue' ? 0 : 1,

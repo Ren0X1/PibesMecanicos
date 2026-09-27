@@ -3,7 +3,7 @@ import { Car, Plus, Trash2, Save } from 'lucide-react'
 import { theme, css, FONT } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts, getItvRecords } from '../lib/api.js'
-import { FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, MAINT_TYPES, getMaintStatus, fuelLabel, transLabel } from '../lib/constants.js'
+import { FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, MAINT_TYPES, getMaintStatus, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
 import { Modal, Field, Loader, ResponsiveGrid2, NumInput, SectionHead, Gauge } from './ui.jsx'
 import { useMediaQuery } from '../lib/useTouch.js'
 import DesktopGarage from './DesktopGarage.jsx'
@@ -112,7 +112,7 @@ function VehicleCard({ car, meta, onOpen, onDelete, mob }) {
     if (!first) return null
     const type = MAINT_TYPES.find(x => x.id === first.r.type_id)
     return {
-      name: type?.name || first.r.type_id,
+      name: type ? maintLabel(type, first.r, car.vehicle_type) : first.r.type_id,
       status: first.status,
       left: first.r.next_km - car.current_km,
     }

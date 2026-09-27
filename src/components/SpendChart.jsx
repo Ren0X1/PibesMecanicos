@@ -16,8 +16,10 @@ import AreaChart, { toAreaData } from './AreaChart.jsx'
    está para ver la forma. El valor exacto es el número de arriba.
    ───────────────────────────────────────────────────────────── */
 
-/* Reparte mantenimientos y repostajes en los últimos 12 meses. */
-export function monthlySpend(maintenance = [], fuelLogs = []) {
+/* Reparte mantenimientos, trabajos libres y repostajes en los
+   últimos 12 meses. Un trabajo libre es gasto de taller como
+   cualquier mantenimiento, así que va en la misma franja. */
+export function monthlySpend(maintenance = [], fuelLogs = [], jobs = []) {
   const now = new Date()
   const buckets = []
   const index = {}
@@ -35,6 +37,11 @@ export function monthlySpend(maintenance = [], fuelLogs = []) {
     const b = index[String(m.last_date).slice(0, 7)]
     if (b) b.maint += Number(m.cost || 0)
   }
+  for (const j of jobs) {
+    if (!j.date) continue
+    const b = index[String(j.date).slice(0, 7)]
+    if (b) b.maint += Number(j.cost || 0)
+  }
   for (const f of fuelLogs) {
     if (!f.date) continue
     const b = index[String(f.date).slice(0, 7)]
@@ -45,11 +52,11 @@ export function monthlySpend(maintenance = [], fuelLogs = []) {
   return buckets
 }
 
-export default function SpendChart({ maintenance, fuelLogs, height = 60 }) {
+export default function SpendChart({ maintenance, fuelLogs, jobs, height = 60 }) {
   useLang()
 
   const data = useMemo(() => {
-    const months = monthlySpend(maintenance, fuelLogs)
+    const months = monthlySpend(maintenance, fuelLogs, jobs)
     const totals = months.map(m => m.total)
     const max = Math.max(...totals, 1)
     const sum = totals.reduce((a, b) => a + b, 0)
@@ -60,7 +67,7 @@ export default function SpendChart({ maintenance, fuelLogs, height = 60 }) {
     // que inventar un «+100 %» que no significa nada.
     const delta = prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null
     return { months, totals, max, sum, avg, cur, prev, delta }
-  }, [maintenance, fuelLogs])
+  }, [maintenance, fuelLogs, jobs])
 
   const { months, totals, max, sum, avg, cur, prev, delta } = data
 

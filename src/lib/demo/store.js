@@ -27,12 +27,22 @@ function load() {
          visitante cambia de idioma hay que rehacerlos: si no, vería
          la interfaz en un idioma y el contenido en otro. Es contenido
          inventado, así que rehacerlo no le quita nada suyo. */
-      if (saved && saved._lang === getLang()) return saved
+      if (saved && saved._lang === getLang()) return completar(saved)
     }
   } catch {}
   const fresh = buildSeed()
   persist(fresh)
   return fresh
+}
+
+/* Quien ya tenía la demo abierta guarda una base sin las tablas que
+   se añaden después. Se le completan vacías en vez de rehacerle los
+   datos: lo que tenga tocado es suyo y no se le tira. */
+function completar(base) {
+  for (const tabla of ['custom_jobs', 'app_settings']) {
+    if (!Array.isArray(base[tabla])) base[tabla] = []
+  }
+  return base
 }
 
 /* Al cambiar de idioma, los datos de ejemplo se vuelven a generar. */
@@ -146,6 +156,7 @@ function cascadeCar(carId) {
   remove('fuel_logs', r => r.car_id === carId)
   remove('itv_records', r => r.car_id === carId)
   remove('vehicle_todos', r => r.car_id === carId)
+  remove('custom_jobs', r => r.car_id === carId)
   db.reminders.forEach(r => { if (r.car_id === carId) r.car_id = null })
 }
 
@@ -207,6 +218,10 @@ export async function upsertMaintenanceRecord(record) {
       next_km: record.next_km, next_date: record.next_date,
       cost: record.cost, notes: record.notes,
       workshop_id: record.workshop_id ?? null,
+      part_id: record.part_id ?? null,
+      // Los dos lados del eje. En moto se quedan a null.
+      last_km_izq: record.last_km_izq ?? null, last_date_izq: record.last_date_izq ?? null,
+      last_km_der: record.last_km_der ?? null, last_date_der: record.last_date_der ?? null,
       updated_at: now(),
     })
     persist()
@@ -235,7 +250,99 @@ export async function createCarPart(part) {
 }
 
 export async function deleteCarPart(id) {
-  remove('car_parts', r => r.id === id); persist()
+  remove('car_parts', r => r.id === id)
+  /* Igual que el ON DELETE SET NULL de la base real: el recambio se
+     va, pero el mantenimiento que lo tenía enlazado se queda. */
+  db.maintenance_records.forEach(r => { if (r.part_id === id) r.part_id = null })
+  db.custom_jobs.forEach(r => { if (r.part_id === id) r.part_id = null })
+  persist()
+}
+
+// ─── Ajustes de la aplicación · modo mantenimiento ───
+
+/* En la demo el interruptor es de verdad, pero solo para quien está
+   mirando: vive en su navegador como el resto de la demo. */
+
+export async function getMaintenanceMode() {
+  const fila = (db.app_settings || []).find(r => r.key === 'maintenance')
+  const v = fila?.value || {}
+  return ok({
+    on: Boolean(v.on),
+    message: v.message || '',
+    updated_at: fila?.updated_at || null,
+    updated_by: fila?.updated_by || null,
+  })
+}
+
+export async function setMaintenanceMode({ on, message = '', userId = null }) {
+  if (!Array.isArray(db.app_settings)) db.app_settings = []
+  let fila = db.app_settings.find(r => r.key === 'maintenance')
+  if (!fila) {
+    fila = { key: 'maintenance', value: {}, updated_at: now(), updated_by: null }
+    db.app_settings.push(fila)
+  }
+  fila.value = { on: Boolean(on), message }
+  fila.updated_at = now()
+  fila.updated_by = userId
+  persist()
+  return ok({ on: Boolean(on), message, updated_at: fila.updated_at, updated_by: userId })
+}
+
+/* En la demo la tarea de GitHub no existe, claro: el interruptor
+   se puede tocar y el último toque es el que trae el seed, para
+   que la pantalla se vea como se ve de verdad. */
+
+export async function getKeepAlive() {
+  const fila = (k) => (db.app_settings || []).find(r => r.key === k)
+  const ajuste = fila('keepalive')?.value || {}
+  const toque = fila('keepalive_ping')?.value || {}
+  return ok({
+    on: Boolean(ajuste.on),
+    everyHours: Number(ajuste.every_hours) || 6,
+    lastPingAt: toque.at || null,
+    source: toque.source || '',
+  })
+}
+
+export async function setKeepAlive({ on, everyHours = 6, userId = null }) {
+  if (!Array.isArray(db.app_settings)) db.app_settings = []
+  let fila = db.app_settings.find(r => r.key === 'keepalive')
+  if (!fila) {
+    fila = { key: 'keepalive', value: {}, updated_at: now(), updated_by: null }
+    db.app_settings.push(fila)
+  }
+  fila.value = { on: Boolean(on), every_hours: everyHours }
+  fila.updated_at = now()
+  fila.updated_by = userId
+  persist()
+  return getKeepAlive()
+}
+
+// ─── Trabajos libres ───
+
+export async function getCustomJobs(carId) {
+  return ok(db.custom_jobs.filter(r => r.car_id === carId).sort(byDesc('date')))
+}
+
+export async function createCustomJob(job) {
+  const row = {
+    id: uid('j'), date: today(), km: 0, cost: 0, notes: '',
+    workshop_id: null, part_id: null,
+    ...job, created_at: now(), updated_at: now(),
+  }
+  db.custom_jobs.push(row); persist()
+  return ok(row)
+}
+
+export async function updateCustomJob(id, updates) {
+  const row = db.custom_jobs.find(r => r.id === id)
+  if (!row) throw new Error(t('err.jobNotFound'))
+  Object.assign(row, updates, { updated_at: now() }); persist()
+  return ok(row)
+}
+
+export async function deleteCustomJob(id) {
+  remove('custom_jobs', r => r.id === id); persist()
 }
 
 // ─── Repostajes ───
@@ -349,8 +456,10 @@ export async function deleteWorkshop(id) {
 // ─── Gastos ───
 
 export async function getAllExpenses(carId) {
-  const [maint, fuel] = await Promise.all([getMaintenanceRecords(carId), getFuelLogs(carId)])
-  return { maint, fuel }
+  const [maint, fuel, jobs] = await Promise.all([
+    getMaintenanceRecords(carId), getFuelLogs(carId), getCustomJobs(carId),
+  ])
+  return { maint, fuel, jobs }
 }
 
 // ─── ITV ───

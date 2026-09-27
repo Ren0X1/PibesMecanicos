@@ -1,16 +1,16 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Trash2, Save, Users, Car, Key, BarChart3, ShieldCheck, Edit2, Check, X, UserCog, Inbox } from 'lucide-react'
+import { Plus, Trash2, Save, Users, Car, Key, BarChart3, ShieldCheck, Edit2, Check, X, UserCog, Inbox, Power, Activity } from 'lucide-react'
 import AreaChart from './AreaChart.jsx'
 import { theme, css } from '../lib/theme.js'
-import { t, useLang, fmtNum } from '../lib/i18n.js'
+import { t, useLang, fmtNum, fmtAgo } from '../lib/i18n.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords, getPendingGroups, approveGroup, rejectGroup } from '../lib/api.js'
+import { getProfiles, createProfile, deleteProfile, updateProfile, getCars, getMaintenanceRecords, getPendingGroups, approveGroup, rejectGroup, getMaintenanceMode, setMaintenanceMode, getKeepAlive, setKeepAlive } from '../lib/api.js'
 import { getMaintStatus, formatDate } from '../lib/constants.js'
 import { Modal, Field, Loader, Stat } from './ui.jsx'
 import { useTwoCol, Panel, Row, AttentionList } from './TwoColumn.jsx'
 
 
-export default function AdminPanel({ onToast }) {
+export default function AdminPanel({ user, onToast, onMaintenanceChange, initialTab }) {
   useLang()
   const mob = useIsMobile()
   const [users, setUsers] = useState([])
@@ -20,12 +20,20 @@ export default function AdminPanel({ onToast }) {
   const [showNew, setShowNew] = useState(false)
   const [newUser, setNewUser] = useState({ name: '', username: '', pin: '1234', role: 'user' })
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState('users')
+  /* Se puede entrar directo a una pestaña: la tira del modo
+     mantenimiento trae al administrador aquí para apagarlo, y
+     dejarle en «Usuarios» era mandarle a buscar. */
+  const [tab, setTab] = useState(initialTab || 'users')
   const [editUser, setEditUser] = useState(null)         // user object being edited
   const [editForm, setEditForm] = useState({ name: '', username: '', role: 'user' })
   const [resetPinUser, setResetPinUser] = useState(null) // user object for PIN reset
   const [newPin, setNewPin] = useState('')
   const [pendingGroups, setPendingGroups] = useState([])
+  const [mmode, setMmode] = useState({ on: false, message: '', updated_at: null })
+  const [mmodeMsg, setMmodeMsg] = useState('')
+  const [mmodeBusy, setMmodeBusy] = useState(false)
+  const [keep, setKeep] = useState({ on: false, everyHours: 6, lastPingAt: null })
+  const [keepBusy, setKeepBusy] = useState(false)
 
   const loadAll = async () => {
     try {
@@ -44,6 +52,12 @@ export default function AdminPanel({ onToast }) {
       setAllCars(cars)
       setAllMaint(maints)
       try { setPendingGroups(await getPendingGroups()) } catch {}
+      try {
+        const estado = await getMaintenanceMode()
+        setMmode(estado)
+        setMmodeMsg(estado.message || '')
+      } catch {}
+      try { setKeep(await getKeepAlive()) } catch {}
     } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
     finally { setLoading(false) }
   }
@@ -134,8 +148,35 @@ export default function AdminPanel({ onToast }) {
 
   if (loading) return <Loader text={t('common.loading')} />
 
+  /* Encender la web es inmediato; apagarla se pregunta antes, que
+     deja fuera a todo el mundo. */
+  const cambiarMmode = async (encender) => {
+    if (encender && !confirm(t('mmode.confirmOn'))) return
+    setMmodeBusy(true)
+    try {
+      const estado = await setMaintenanceMode({
+        on: encender, message: mmodeMsg, userId: user?.id || null,
+      })
+      setMmode(estado)
+      onMaintenanceChange?.(estado)
+      onToast(encender ? t('mmode.turnedOn') : t('mmode.turnedOff'))
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
+    finally { setMmodeBusy(false) }
+  }
+
+  const cambiarKeep = async (encender) => {
+    setKeepBusy(true)
+    try {
+      const estado = await setKeepAlive({ on: encender, everyHours: keep.everyHours, userId: user?.id || null })
+      setKeep(estado)
+      onToast(encender ? t('keep.turnedOn') : t('keep.turnedOff'))
+    } catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
+    finally { setKeepBusy(false) }
+  }
+
   const tabs = [
     { id: 'users', icon: <Users size={14} />, label: t('adm.users') },
+    { id: 'site', icon: <Power size={14} />, label: t('mmode.tab') },
     { id: 'groups', icon: <Inbox size={14} />, label: t('grp.title'), badge: pendingGroups.length > 0 ? pendingGroups.length : null },
     { id: 'stats', icon: <BarChart3 size={14} />, label: t('adm.stats') },
   ]
@@ -189,6 +230,112 @@ export default function AdminPanel({ onToast }) {
         </div>
 
         <div style={{ minWidth: 0 }}>
+        {/* ── La web: encendida o apagada ── */}
+        {tab === 'site' && (
+          <div style={{ ...css.card, padding: mob ? 16 : 22 }}>
+            <div style={{ ...css.flexBetween, gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+              <h3 style={css.h3}>
+                <Power size={15} style={{ marginRight: 6 }} />{t('mmode.panelTitle')}
+              </h3>
+              <span style={mmode.on
+                ? css.badge(theme.yellowSoft, theme.yellow)
+                : css.badge(theme.greenSoft, theme.green)}>
+                {mmode.on ? t('mmode.stateOn') : t('mmode.stateOff')}
+              </span>
+            </div>
+
+            <p style={{
+              ...css.lbl, textTransform: 'none', letterSpacing: '0.02em',
+              fontSize: 12.5, lineHeight: 1.5, color: theme.muted, margin: '0 0 18px',
+            }}>{t('mmode.help')}</p>
+
+            {mmode.on && mmode.updated_at && (
+              <p style={{ ...css.lbl, color: theme.yellow, margin: '0 0 16px' }}>
+                {t('mmode.since', { when: fmtAgo(mmode.updated_at) })}
+              </p>
+            )}
+
+            <Field label={t('mmode.msgLabel')}>
+              <input style={css.input} value={mmodeMsg} maxLength={140}
+                onChange={e => setMmodeMsg(e.target.value)}
+                placeholder={t('mmode.msgPh')} />
+            </Field>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+              {mmode.on ? (
+                <button onClick={() => cambiarMmode(false)} disabled={mmodeBusy}
+                  style={css.btn(theme.green, theme.bg)}>
+                  <Power size={13} /> {mmodeBusy ? t('common.saving') : t('mmode.turnOff')}
+                </button>
+              ) : (
+                <button onClick={() => cambiarMmode(true)} disabled={mmodeBusy}
+                  style={css.btn(theme.yellow, theme.bg)}>
+                  <Power size={13} /> {mmodeBusy ? t('common.saving') : t('mmode.turnOn')}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Que la base no se duerma ── */}
+        {tab === 'site' && (
+          <div style={{ ...css.card, padding: mob ? 16 : 22 }}>
+            <div style={{ ...css.flexBetween, gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+              <h3 style={css.h3}>
+                <Activity size={15} style={{ marginRight: 6 }} />{t('keep.title')}
+              </h3>
+              <span style={keep.on
+                ? css.badge(theme.greenSoft, theme.green)
+                : css.badge('transparent', theme.mutedLight)}>
+                {keep.on ? t('mmode.stateOn') : t('mmode.stateOff')}
+              </span>
+            </div>
+
+            <p style={{
+              ...css.lbl, textTransform: 'none', letterSpacing: '0.02em',
+              fontSize: 12.5, lineHeight: 1.5, color: theme.muted, margin: '0 0 12px',
+            }}>{t('keep.help', { n: keep.everyHours })}</p>
+
+            {/* Cuándo tocó la base por última vez. Si hace más de un
+                día, algo le pasa a la tarea y hay que ir a mirarla. */}
+            {keep.on && (() => {
+              const horas = keep.lastPingAt
+                ? (Date.now() - new Date(keep.lastPingAt).getTime()) / 3600000
+                : null
+              const parado = horas === null || horas > 24
+              return (
+                <p style={{
+                  ...css.lbl, color: parado ? theme.yellow : theme.green,
+                  margin: '0 0 14px', letterSpacing: '0.08em',
+                  borderLeft: `2px solid ${parado ? theme.yellow : theme.green}`, paddingLeft: 9,
+                }}>
+                  {keep.lastPingAt
+                    ? t('keep.lastPing', { when: fmtAgo(keep.lastPingAt) })
+                    : t('keep.never')}
+                  {horas !== null && horas > 24 ? ` · ${t('keep.stale')}` : ''}
+                </p>
+              )
+            })()}
+
+            <p style={{
+              ...css.lbl, textTransform: 'none', letterSpacing: '0.02em',
+              fontSize: 11.5, lineHeight: 1.5, color: theme.mutedLight, margin: '0 0 16px',
+            }}>{t('keep.note')}</p>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              {keep.on ? (
+                <button onClick={() => cambiarKeep(false)} disabled={keepBusy} style={css.btnOutline}>
+                  <Activity size={13} /> {keepBusy ? t('common.saving') : t('mmode.turnOff')}
+                </button>
+              ) : (
+                <button onClick={() => cambiarKeep(true)} disabled={keepBusy} style={css.btn(theme.green, theme.bg)}>
+                  <Activity size={13} /> {keepBusy ? t('common.saving') : t('mmode.turnOn')}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {tab === 'users' && (
           <>
             <div style={{ ...css.flexBetween, marginBottom: 16, gap: 12 }}>

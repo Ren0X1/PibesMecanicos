@@ -9,6 +9,7 @@ import UserStats from './components/UserStats.jsx'
 import ExpenseTab from './components/ExpenseTab.jsx'
 import AdminPanel from './components/AdminPanel.jsx'
 import CarDetail from './components/CarDetail.jsx'
+import MaintenanceWall from './components/MaintenanceWall.jsx'
 import Reminders from './components/Reminders.jsx'
 import Workshops from './components/Workshops.jsx'
 import Groups from './components/Groups.jsx'
@@ -252,11 +253,14 @@ function Screens() {
       demoStore.getDemoUser(),
     ]).then(async ([cars, user]) => {
       const car = cars[0]
+      const moto = cars.find(c => c.vehicle_type === 'moto') || cars[1] || car
       setDatos({
         user,
         car,
+        moto,
         maintenance: await demoStore.getMaintenanceRecords(car.id),
         fuelLogs: await demoStore.getFuelLogs(car.id),
+        jobs: await demoStore.getCustomJobs(car.id),
       })
     })
   }, [])
@@ -278,6 +282,15 @@ function Screens() {
         <>
           <h2 style={{ ...css.h2, fontSize: 16, margin: '10px 0' }}>Ficha completa</h2>
           <CarDetail car={datos.car} onBack={() => {}} onCarUpdated={() => {}} onToast={() => {}} />
+        </>
+      )}
+
+      {/* La moto aparte: es donde se comprueba que un eje sin lados
+          se ve bien y que los nombres van en singular. */}
+      {show('moto') && (
+        <>
+          <h2 style={{ ...css.h2, fontSize: 16, margin: '10px 0' }}>Ficha de la moto</h2>
+          <CarDetail car={datos.moto} onBack={() => {}} onCarUpdated={() => {}} onToast={() => {}} />
         </>
       )}
 
@@ -308,6 +321,8 @@ function Screens() {
           <ExpenseTab
             maintenance={datos.maintenance}
             fuelLogs={datos.fuelLogs}
+            jobs={datos.jobs}
+            vehicleType={datos.car.vehicle_type}
             isMobile={false}
             currentKm={datos.car.current_km}
           />
@@ -318,6 +333,13 @@ function Screens() {
         <>
           <h2 style={{ ...css.h2, fontSize: 16, margin: '34px 0 10px' }}>Resumen</h2>
           <UserStats user={datos.user} onToast={() => {}} />
+        </>
+      )}
+
+      {show('mmode') && (
+        <>
+          <h2 style={{ ...css.h2, fontSize: 16, margin: '10px 0' }}>La web apagada</h2>
+          <MaintenanceWall user={null} message="" onLogin={() => {}} onLogout={() => {}} />
         </>
       )}
 

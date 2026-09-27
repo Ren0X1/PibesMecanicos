@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { theme, css, getThemeMode, setThemeMode, onThemeChange } from './lib/theme.js'
 import { useIsMobile } from './lib/useIsMobile.js'
-import { updateProfile, getDemoUser } from './lib/api.js'
+import { updateProfile, getDemoUser, getMaintenanceMode } from './lib/api.js'
 import { isDemo, onDemoChange, exitDemo } from './lib/demo/mode.js'
 import { t, useLang, onLangChange } from './lib/i18n.js'
 import { needsOnboarding, adoptProfilePrefs } from './lib/prefs.js'
@@ -19,6 +19,7 @@ import Workshops from './components/Workshops.jsx'
 import Groups from './components/Groups.jsx'
 import UserStats from './components/UserStats.jsx'
 import Reminders from './components/Reminders.jsx'
+import MaintenanceWall, { MaintenanceBanner } from './components/MaintenanceWall.jsx'
 
 function PinChangeModal({ user, onDone }) {
   const [pin, setPin] = useState('')
@@ -95,11 +96,32 @@ export default function App() {
   const [themeKey, setThemeKey] = useState(0)
   const [resetKey, setResetKey] = useState(0)  // solo se toca al reiniciar o cambiar de modo
   const [showSettings, setShowSettings] = useState(false)
+  const [adminTab, setAdminTab] = useState(null)   // pestaña con la que abrir el panel
+  /* El interruptor de la web. Empieza apagado a propósito: si la
+     consulta falla o tarda, se entra como siempre. Una web que se
+     cae porque no puede preguntar si está caída sería peor que el
+     problema que viene a resolver. */
+  const [mmode, setMmode] = useState({ on: false, message: '' })
   const isMobile = useIsMobile()
   useLang()
 
   /* El tema y el acento viven fuera de React: hay que repintar a mano. */
   useEffect(() => onThemeChange(() => setThemeKey(k => k + 1)), [])
+
+  /* Se pregunta al entrar y cada minuto: quien esté dentro cuando se
+     apague la web se entera solo, sin tener que recargar. */
+  useEffect(() => {
+    let vivo = true
+    const mirar = async () => {
+      try {
+        const estado = await getMaintenanceMode()
+        if (vivo) setMmode(estado)
+      } catch { /* si no se puede preguntar, se sigue como siempre */ }
+    }
+    mirar()
+    const id = setInterval(mirar, 60000)
+    return () => { vivo = false; clearInterval(id) }
+  }, [demo, dataVersion])
 
   /* En la demo, cambiar de idioma regenera los datos de ejemplo, así
      que hay que volver a montar las vistas para que los recarguen. */
@@ -150,6 +172,21 @@ export default function App() {
     ...(currentUser?.role === 'admin' ? ['admin'] : [])]
   const viewIndex = Math.max(0, views.indexOf(view))
 
+  /* La web apagada. El administrador pasa —es quien tiene que
+     apagarla y encenderla— y los demás ven el aviso. Sin sesión
+     también se ve el aviso, con una puerta pequeña para entrar. */
+  const esAdmin = currentUser?.role === 'admin'
+  if (mmode.on && !esAdmin) {
+    return (
+      <MaintenanceWall
+        user={currentUser}
+        message={mmode.message}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+      />
+    )
+  }
+
   if (!currentUser) return <Login onLogin={handleLogin} />
 
   if (needsOnboarding(currentUser)) {
@@ -173,6 +210,10 @@ export default function App() {
       display: 'flex', flexDirection: 'column',
       paddingBottom: isMobile ? 'calc(env(safe-area-inset-bottom, 0) + 72px)' : 0,
     }}>
+      {mmode.on && esAdmin && (
+        <MaintenanceBanner stacked={demo}
+          onGoPanel={() => { setAdminTab('site'); setView('admin') }} />
+      )}
       {demo && (
         <DemoBanner onReset={() => {
           setCurrentUser(getDemoUser())
@@ -192,7 +233,10 @@ export default function App() {
           {view === 'reminders' && <Reminders user={currentUser} onToast={onToast} />}
           {view === 'groups' && <Groups user={currentUser} onToast={onToast} />}
           {view === 'workshops' && <Workshops user={currentUser} onToast={onToast} />}
-          {view === 'admin' && currentUser.role === 'admin' && <AdminPanel onToast={onToast} />}
+          {view === 'admin' && currentUser.role === 'admin' && (
+            <AdminPanel key={adminTab || 'users'} user={currentUser} onToast={onToast}
+              onMaintenanceChange={setMmode} initialTab={adminTab} />
+          )}
         </div>
       </SwipeArea>
       <Footer />

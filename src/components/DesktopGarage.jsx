@@ -8,7 +8,7 @@ import {
   getMaintenanceRecords, getVehicleTodos, getCarParts,
   getFuelLogs, getKmLogs, getItvRecords,
 } from '../lib/api.js'
-import { MAINT_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle, fuelLabel, transLabel } from '../lib/constants.js'
+import { MAINT_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
 import { t, useLang, fmtNum, fmtMoney } from '../lib/i18n.js'
 import { Gauge, StatusBadge, Loader } from './ui.jsx'
 import SpendChart from './SpendChart.jsx'
@@ -168,7 +168,7 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
             <tbody>
               {list.slice(0, rows).map(({ mt, rec, st }) => (
                 <tr key={mt.id}>
-                  <td style={{ ...css.td, fontWeight: 600, color: theme.white }}>{mt.name}</td>
+                  <td style={{ ...css.td, fontWeight: 600, color: theme.white }}>{maintLabel(mt, rec, car.vehicle_type)}</td>
                   <td style={css.td}>
                     {st ? <StatusBadge status={st} /> : <span style={css.lbl}>{t('common.noData')}</span>}
                   </td>
@@ -178,7 +178,11 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
                     </td>
                   )}
                   <td style={{ ...css.td, ...css.num, textAlign: 'right' }}>
-                    {rec ? `${fmtNum(rec.next_km - car.current_km)} ${t('common.km')}` : '—'}
+                    {/* Sin intervalo de kilómetros no hay «lo que
+                        queda»: salía «-187.450 km», que no es nada. */}
+                    {rec && rec.next_km > 0
+                      ? `${fmtNum(rec.next_km - car.current_km)} ${t('common.km')}`
+                      : '—'}
                   </td>
                 </tr>
               ))}

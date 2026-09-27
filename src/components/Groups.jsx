@@ -5,7 +5,7 @@ import {
   Crown, Clock, Check, Mail, Inbox, Sparkles
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
-import { t, useLang, getLocale } from '../lib/i18n.js'
+import { t, useLang, getLocale, fmtNum } from '../lib/i18n.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { useTwoCol } from './TwoColumn.jsx'
 import {
@@ -14,7 +14,7 @@ import {
   getMaintenanceRecords, getCarParts, getItvRecords, getFuelLogs,
   inviteToGroup, getMyInvitations, getGroupInvitations, acceptInvitation, rejectInvitation
 } from '../lib/api.js'
-import { getMaintStatus, MAINT_TYPES, fuelLabel, transLabel } from '../lib/constants.js'
+import { getMaintStatus, MAINT_TYPES, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
 import { Modal, Field, Loader, StatusBadge } from './ui.jsx'
 
 function calcAvgConsumption(logs) {
@@ -80,9 +80,11 @@ function CarViewer({ car, onClose, isMobile }) {
             const status = getMaintStatus(m, car.current_km)
             return (
               <div key={m.id} style={{ padding: '8px 14px', borderBottom: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                <span>{mt?.emoji} {mt?.name || m.type_id}</span>
+                <span>{mt?.emoji} {mt ? maintLabel(mt, m, car.vehicle_type) : m.type_id}</span>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ color: theme.muted }}>{m.next_km?.toLocaleString()} km</span>
+                  <span style={{ ...css.num, color: theme.muted }}>
+                    {m.next_km > 0 ? `${fmtNum(m.next_km)} ${t('common.km')}` : '—'}
+                  </span>
                   <StatusBadge status={status} />
                 </div>
               </div>

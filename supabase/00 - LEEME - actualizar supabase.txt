@@ -1,10 +1,111 @@
 ═══════════════════════════════════════════════════════════════
  PIBES MECÁNICOS · ACTUALIZAR LA BASE DE DATOS
- Migración 15 — permisos de la Data API
+ Migraciones 16, 17 y 18
 ═══════════════════════════════════════════════════════════════
 
 LO ÚLTIMO QUE HAY QUE APLICAR
 ─────────────────────────────
+Tres ficheros, en este orden:
+
+  supabase/16 - migration-piezas-por-eje.sql
+  supabase/17 - migration-modo-mantenimiento.sql
+  supabase/18 - migration-mantener-despierta.sql
+
+Las tres se pueden ejecutar dos veces sin romper nada.
+
+
+LA 16 — LAS PIEZAS QUE VAN POR EJE
+──────────────────────────────────
+Neumáticos, discos y amortiguadores dejan de ser una pieza y
+pasan a ser dos ejes: delantero y trasero. En un coche, cada eje
+tiene lado izquierdo y derecho; en una moto no, que solo hay una
+rueda delante y otra detrás.
+
+Qué hace con lo que ya había:
+
+ - Cada registro viejo de 'neumaticos', 'discos_freno' o
+   'amortiguadores' se convierte en DOS, uno por eje, con las
+   mismas fechas y kilómetros. No se pierde nada.
+
+ - El coste va solo en el delantero. Es a propósito: si se copiara
+   en los dos, el gasto del coche y lo gastado en cada taller
+   subirían el doble de un día para otro. El total de dinero
+   queda exactamente igual que antes.
+
+ - En coche, los dos lados se rellenan con el mismo dato, que es
+   lo que de verdad pasó: nadie cambia una sola rueda delantera.
+   En moto los lados se quedan vacíos.
+
+ - A las pastillas, que ya iban por eje, solo se les rellenan los
+   lados. Sus datos no se tocan.
+
+Los registros repartidos llevan una nota que lo dice, para poder
+repasarlos. Lo que queda por hacer a mano es poco: si de verdad
+cambiaste un solo lado, edítalo y ponlo.
+
+Trae además dos cosas nuevas: el recambio enlazado a cada
+elemento (columna part_id, con la medida delantera y la trasera
+por separado) y la tabla custom_jobs, los trabajos libres —una
+rótula, una soldadura, un pulido— que no están en la lista.
+
+
+LA 17 — MODO MANTENIMIENTO
+──────────────────────────
+Un interruptor que apaga la web para todo el mundo menos para los
+administradores. Mientras está puesto, quien entra ve un aviso y
+no puede tocar nada; el administrador entra igual, ve una tira
+amarilla arriba y lo apaga desde su panel, en la pestaña «La web».
+
+Crea la tabla app_settings, con una fila por ajuste, y la deja
+apagada. Volver a ejecutar la migración no la enciende.
+
+Si alguna vez te quedas fuera, al final del fichero está el UPDATE
+para apagarlo desde el editor SQL.
+
+
+LA 18 — MANTENER LA BASE DESPIERTA
+──────────────────────────────────
+Un proyecto de Supabase que no recibe una sola consulta se pausa
+solo. Esta migración añade dos filas de ajustes: el interruptor
+(nace encendido) y la marca del último toque.
+
+Quien toca la base es una tarea de GitHub Actions,
+.github/workflows/keepalive.yml, que entra cada seis horas, mira
+el interruptor y, si está puesto, hace un SELECT y apunta la
+hora. Usa los mismos secretos que el despliegue, así que no hay
+nada que configurar.
+
+Se enciende y se apaga desde el panel de administración, pestaña
+«La web», donde además se ve cuándo fue el último toque. Si pasa
+más de un día sin tocarla, ahí sale el aviso para ir a mirar la
+tarea en GitHub.
+
+Ojo con una cosa: mientras el workflow exista, la comprobación
+del interruptor ya es una consulta. Apagarlo desde el panel deja
+de hacer el SELECT, pero si lo que quieres es que la base no
+reciba NADA, hay que desactivar el workflow en GitHub
+(Actions → Mantener la base despierta → Disable workflow).
+
+
+COMPROBAR QUE HAN IDO BIEN
+──────────────────────────
+Cada fichero trae sus consultas al final. Las dos que importan:
+
+  -- no puede quedar ni un registro con los tipos viejos
+  SELECT type_id, count(*) FROM maintenance_records
+   WHERE type_id IN ('neumaticos', 'discos_freno', 'amortiguadores')
+   GROUP BY type_id;
+
+  -- y el dinero tiene que ser el mismo que antes de la 16
+  SELECT sum(cost) FROM maintenance_records;
+
+
+═══════════════════════════════════════════════════════════════
+ Migración 15 — permisos de la Data API
+═══════════════════════════════════════════════════════════════
+
+QUÉ HACE
+────────
 Ejecuta el fichero:
 
   supabase/15 - migration-grants-api.sql
@@ -237,10 +338,10 @@ Fichero equivalente en SQL:
   supabase/13 - migration-user-preferences.sql
 
 Sobre la numeración de esta carpeta:
-  Los ficheros van con dos cifras (01, 02, ... 15) para que el
+  Los ficheros van con dos cifras (01, 02, ... 18) para que el
   explorador los ordene de verdad. Sin el cero delante, "10" se
   colaba justo detrás de "1" y "2" aparecía después de "13".
-  Al añadir una migración nueva, sigue la cuenta: 16, 17...
+  Al añadir una migración nueva, sigue la cuenta: 19, 20...
 
   schema-completo.sql   esquema entero, para empezar de cero
   migration-grants.sql  la versión sin numerar de la 15, anterior

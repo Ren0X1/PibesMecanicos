@@ -115,6 +115,28 @@ export function fmtDate(iso) {
   return d.toLocaleDateString(getLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
+/* «Hace tres horas», en el idioma activo. Se usa para decir
+   cuándo fue la última vez que la tarea tocó la base: una fecha
+   completa obligaría a restar de cabeza. */
+export function fmtAgo(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '—'
+  const segundos = Math.round((d.getTime() - Date.now()) / 1000)
+  const tramos = [
+    [60, 'second', 1],
+    [3600, 'minute', 60],
+    [86400, 'hour', 3600],
+    [2592000, 'day', 86400],
+    [31536000, 'month', 2592000],
+    [Infinity, 'year', 31536000],
+  ]
+  const abs = Math.abs(segundos)
+  const [, unidad, divisor] = tramos.find(([limite]) => abs < limite)
+  const rtf = new Intl.RelativeTimeFormat(getLocale(), { numeric: 'auto' })
+  return rtf.format(Math.round(segundos / divisor), unidad)
+}
+
 /* Mes abreviado, para los ejes de las gráficas. */
 export function fmtMonth(date) {
   const d = date instanceof Date ? date : new Date(date)

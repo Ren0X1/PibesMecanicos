@@ -43,26 +43,50 @@ export function buildSeed() {
 
   /* El BMW llega con dos vencidos y dos próximos: es lo que hace que
      el indicador de la ficha baje y se entienda de un vistazo. */
+  /* Los ejes llevan sus dos lados. El delantero del BMW esta a
+     proposito con un lado nuevo y otro viejo: es el caso que hay
+     que ver de un vistazo -se pincho el izquierdo y se cambio solo
+     ese- y el aviso lo manda el derecho, que es el que esta peor.
+     En la moto los lados van vacios: una rueda delante y otra
+     detras. */
   const maintenance_records = [
-    m('c-bmw', 'pastillas_del', 147000, ago(300), 187100, null, 138.4, s('seed.padsNote'), 'w-1'),
+    m('c-bmw', 'pastillas_del', 147000, ago(300), 187100, null, 138.4, s('seed.padsNote'), 'w-1',
+      { ambos: [147000, ago(300)], part_id: 'p-3' }),
     m('c-bmw', 'filtro_aire',   166200, ago(210), 186200, null, 24.9,  ''),
     m('c-bmw', 'aceite',        178000, ago(120), 188000, ahead(45), 96.5, s('seed.oilNote'), 'w-1'),
-    m('c-bmw', 'filtro_aceite', 178000, ago(120), 188000, ahead(45), 14.2, '', 'w-1'),
+    m('c-bmw', 'filtro_aceite', 178000, ago(120), 188000, ahead(45), 14.2, '', 'w-1',
+      { part_id: 'p-1' }),
     m('c-bmw', 'correa_dist',   112000, ago(700), 232000, null, 612.0, s('seed.beltNote'), 'w-1'),
-    m('c-bmw', 'neumaticos',    158000, ago(260), 203000, null, 428.0, s('seed.tyreNote'), 'w-2'),
+    m('c-bmw', 'neumaticos_del', 158000, ago(260), 203000, null, 118.0, s('seed.tyreFrontNote'), 'w-2',
+      { izq: [186000, ago(40)], der: [158000, ago(260)], part_id: 'p-5' }),
+    m('c-bmw', 'neumaticos_tras', 158000, ago(260), 203000, null, 310.0, s('seed.tyreNote'), 'w-2',
+      { ambos: [158000, ago(260)], part_id: 'p-6' }),
+    m('c-bmw', 'silentblocks_del', 170000, ago(150), 0, null, 210.0, s('seed.sbNote'), 'w-1',
+      { ambos: [170000, ago(150)] }),
     m('c-bmw', 'bateria',       150000, ago(340), 210000, ahead(400), 121.0, ''),
     m('c-bmw', 'liquido_frenos',158000, ago(260), 198000, ahead(180), 42.0, ''),
 
     m('c-mt07', 'aceite',       18200, ago(150), 27200, ahead(210), 58.0, s('seed.mtOilNote'), 'w-3'),
     m('c-mt07', 'filtro_aceite',18200, ago(150), 27200, ahead(210), 11.5, ''),
-    m('c-mt07', 'cadena',       12000, ago(300), 34000, null, 0, s('seed.chainNote')),
-    m('c-mt07', 'pastillas_del',10500, ago(330), 45500, null, 74.0, '', 'w-3'),
-    m('c-mt07', 'neumaticos',   11000, ago(320), 45000, null, 310.0, s('seed.roadNote'), 'w-2'),
+    m('c-mt07', 'cadena',       12000, ago(300), 34000, null, 0, s('seed.chainNote'), null,
+      { part_id: 'p-4' }),
+    m('c-mt07', 'pastillas_del',10500, ago(330), 30500, null, 74.0, '', 'w-3'),
+    m('c-mt07', 'neumaticos_del', 11000, ago(320), 31000, null, 165.0, s('seed.roadNote'), 'w-2'),
+    m('c-mt07', 'neumaticos_tras', 18500, ago(120), 30500, null, 175.0, s('seed.roadNote'), 'w-2'),
 
     m('c-leon', 'aceite',       68000, ago(190), 78000, ahead(10), 82.0, ''),
     m('c-leon', 'filtro_aire',  60000, ago(320), 80000, null, 21.0, ''),
 
     m('c-vespa','aceite',       5200,  ago(200), 10200, ahead(120), 34.0, ''),
+  ]
+
+  /* Trabajos libres: lo que no esta en la lista. Uno con taller y
+     coste, otro sin taller, y uno de la moto, para que se vea que
+     valen para todo. */
+  const custom_jobs = [
+    j('c-bmw',  s('seed.job1'), ago(95),  180200, 96.0, 'w-1', s('seed.job1Note')),
+    j('c-bmw',  s('seed.job2'), ago(230), 172400, 40.0, null,  ''),
+    j('c-mt07', s('seed.job3'), ago(60),  23100,  28.5, null,  ''),
   ]
 
   const km_logs = [
@@ -96,6 +120,10 @@ export function buildSeed() {
     { id: 'p-2', car_id: 'c-bmw',  name: s('seed.partCabin'), reference: 'MANN CUK 2939', url: '', created_at: tsAgo(120) },
     { id: 'p-3', car_id: 'c-bmw',  name: s('seed.partPads'), reference: 'BREMBO P06 040', url: '', created_at: tsAgo(300) },
     { id: 'p-4', car_id: 'c-mt07', name: s('seed.partChain'), reference: 'DID 520VX3 · 16/43', url: '', created_at: tsAgo(180) },
+    /* Delante y detras llevan medida distinta, que es justo por lo
+       que el recambio se enlaza a cada eje y no a la pieza entera. */
+    { id: 'p-5', car_id: 'c-bmw',  name: s('seed.partTyreF'), reference: 'Michelin Primacy 4 · 205/55 R16', url: '', created_at: tsAgo(260) },
+    { id: 'p-6', car_id: 'c-bmw',  name: s('seed.partTyreR'), reference: 'Michelin Primacy 4 · 225/50 R16', url: '', created_at: tsAgo(260) },
   ]
 
   const itv_records = [
@@ -140,6 +168,16 @@ export function buildSeed() {
     { id: 'gm-4', group_id: 'g-2', user_id: 'u-javi',     joined_at: tsAgo(70) },
   ]
 
+  /* El interruptor de la web, apagado. La demo lo trae para que se
+     pueda probar el modo mantenimiento sin tocar nada de verdad. */
+  const app_settings = [
+    { key: 'maintenance', value: { on: false, message: '' }, updated_at: tsAgo(30), updated_by: null },
+    { key: 'keepalive', value: { on: true, every_hours: 6 }, updated_at: tsAgo(30), updated_by: null },
+    /* El último toque, hace un rato: es lo que enseña que la tarea
+       está viva. En horas, no en días, que si no parece parada. */
+    { key: 'keepalive_ping', value: { at: new Date(Date.now() - 2.5 * 3600000).toISOString(), source: 'github' }, updated_at: new Date(Date.now() - 2.5 * 3600000).toISOString(), updated_by: null },
+  ]
+
   const group_invitations = [
     { id: 'gi-1', group_id: 'g-2', user_id: DEMO_USER_ID, invited_by: 'u-javi', status: 'pending', created_at: tsAgo(2) },
   ]
@@ -157,7 +195,7 @@ export function buildSeed() {
     _lang: getLang(),   // con qué idioma se generó este juego de datos
     profiles, cars, km_logs, maintenance_records, car_parts, fuel_logs,
     itv_records, workshops, groups, group_members, group_messages,
-    group_invitations, vehicle_todos, reminders,
+    group_invitations, vehicle_todos, reminders, custom_jobs, app_settings,
   }
 }
 
@@ -166,11 +204,29 @@ export function buildSeed() {
 let seq = 0
 const uid = (p) => `${p}-${++seq}`
 
-function m(car_id, type_id, last_km, last_date, next_km, next_date, cost, notes, workshop_id = null) {
+/* `extra` lleva los lados y el recambio enlazado:
+     { ambos: [km, fecha] }            los dos iguales
+     { izq: [km, fecha], der: [...] }  cada uno lo suyo
+     { part_id: 'p-5' }                recambio del eje
+   Sin lados -una moto, o una pieza que no va por eje- las cuatro
+   columnas se quedan a null, que es lo que hay en la base real. */
+function m(car_id, type_id, last_km, last_date, next_km, next_date, cost, notes, workshop_id = null, extra = {}) {
+  const { ambos, izq = ambos, der = ambos, part_id = null } = extra || {}
   return {
     id: uid('m'), car_id, type_id, last_km, last_date, next_km, next_date,
-    cost, notes, workshop_id,
+    cost, notes, workshop_id, part_id,
+    last_km_izq: izq ? izq[0] : null, last_date_izq: izq ? izq[1] : null,
+    last_km_der: der ? der[0] : null, last_date_der: der ? der[1] : null,
     created_at: new Date(last_date).toISOString(), updated_at: new Date(last_date).toISOString(),
+  }
+}
+
+/* Un trabajo libre: nombre a mano, fecha, km, coste y taller. */
+function j(car_id, name, date, km, cost, workshop_id, notes) {
+  return {
+    id: uid('j'), car_id, name, date, km, cost, workshop_id, notes,
+    part_id: null,
+    created_at: new Date(date).toISOString(), updated_at: new Date(date).toISOString(),
   }
 }
 

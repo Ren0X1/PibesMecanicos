@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Bell, X, AlertTriangle, Clock, ShieldAlert, ChevronRight, BellOff, Undo2, EyeOff, Eye } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { getCars, getMaintenanceRecords, getItvRecords, getReminders, getMyInvitations } from '../lib/api.js'
-import { MAINT_TYPES, getMaintStatus, formatDate } from '../lib/constants.js'
+import { MAINT_TYPES, getMaintStatus, formatDate, maintLabel } from '../lib/constants.js'
 import { t, useLang, fmtNum } from '../lib/i18n.js'
 import { getSnoozed, snooze, unsnooze, daysLeft, SNOOZE_DAYS } from '../lib/snooze.js'
 
@@ -58,7 +58,7 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
               id: `maint-${m.id}`,
               type: status === 'overdue' ? 'danger' : 'warning',
               icon: mt?.emoji || '🔧',
-              title: mt?.name || m.type_id,
+              title: mt ? maintLabel(mt, m, car.vehicle_type) : m.type_id,
               vehicle: `${vEmoji} ${vName}`,
               detail: status === 'overdue'
                 ? [t('notif.overdue'),

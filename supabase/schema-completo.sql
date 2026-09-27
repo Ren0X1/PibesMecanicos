@@ -83,20 +83,48 @@ CREATE TABLE IF NOT EXISTS km_logs (
 -- 4) MAINTENANCE RECORDS
 -- ═══════════════════════════════════════════════════════════
 
+-- Las piezas que van por eje (neumáticos, discos, pastillas,
+-- amortiguadores, silentblocks) llevan un type_id por eje —
+-- 'neumaticos_del', 'neumaticos_tras'... — y, en coche, los dos
+-- lados en las columnas _izq y _der.
+--
+-- last_km y last_date son los del lado que peor está: son los que
+-- deciden el aviso, y por eso el resto de la aplicación puede
+-- seguir leyéndolos sin saber nada de lados. En moto los lados se
+-- quedan vacíos, que una moto tiene una rueda delante y otra
+-- detrás.
 CREATE TABLE IF NOT EXISTS maintenance_records (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  car_id      UUID NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
-  type_id     TEXT NOT NULL,
-  last_km     INTEGER NOT NULL DEFAULT 0,
-  last_date   DATE,
-  next_km     INTEGER NOT NULL DEFAULT 0,
-  next_date   DATE,
-  cost        NUMERIC(10,2) DEFAULT 0,
-  notes       TEXT DEFAULT '',
-  created_at  TIMESTAMPTZ DEFAULT now(),
-  updated_at  TIMESTAMPTZ DEFAULT now(),
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  car_id        UUID NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
+  type_id       TEXT NOT NULL,
+  last_km       INTEGER NOT NULL DEFAULT 0,
+  last_date     DATE,
+  last_km_izq   INTEGER,
+  last_date_izq DATE,
+  last_km_der   INTEGER,
+  last_date_der DATE,
+  next_km       INTEGER NOT NULL DEFAULT 0,
+  next_date     DATE,
+  cost          NUMERIC(10,2) DEFAULT 0,
+  notes         TEXT DEFAULT '',
+  -- workshops y car_parts se crean más abajo, así que estas dos
+  -- columnas se quedan sueltas aquí y sus claves ajenas se añaden
+  -- al final del fichero, cuando ya existen las tablas.
+  workshop_id   UUID,
+  part_id       UUID,
+  created_at    TIMESTAMPTZ DEFAULT now(),
+  updated_at    TIMESTAMPTZ DEFAULT now(),
   UNIQUE(car_id, type_id)
 );
+
+-- Por si la tabla ya existía de una instalación anterior.
+ALTER TABLE maintenance_records
+  ADD COLUMN IF NOT EXISTS last_km_izq   INTEGER,
+  ADD COLUMN IF NOT EXISTS last_date_izq DATE,
+  ADD COLUMN IF NOT EXISTS last_km_der   INTEGER,
+  ADD COLUMN IF NOT EXISTS last_date_der DATE,
+  ADD COLUMN IF NOT EXISTS workshop_id   UUID,
+  ADD COLUMN IF NOT EXISTS part_id       UUID;
 
 
 -- ═══════════════════════════════════════════════════════════
@@ -244,6 +272,48 @@ CREATE TABLE IF NOT EXISTS reminders (
 
 
 -- ═══════════════════════════════════════════════════════════
+-- 11 bis) CUSTOM JOBS (trabajos libres)
+-- ═══════════════════════════════════════════════════════════
+-- Para lo que no está en la lista: una rótula, una soldadura, un
+-- pulido. Texto libre, varias entradas por vehículo, sin avisos.
+
+CREATE TABLE IF NOT EXISTS custom_jobs (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  car_id      UUID NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
+  name        TEXT NOT NULL,
+  date        DATE NOT NULL DEFAULT CURRENT_DATE,
+  km          INTEGER NOT NULL DEFAULT 0,
+  cost        NUMERIC(10,2) DEFAULT 0,
+  workshop_id UUID REFERENCES workshops(id) ON DELETE SET NULL,
+  part_id     UUID REFERENCES car_parts(id) ON DELETE SET NULL,
+  notes       TEXT DEFAULT '',
+  created_at  TIMESTAMPTZ DEFAULT now(),
+  updated_at  TIMESTAMPTZ DEFAULT now()
+);
+
+
+-- ═══════════════════════════════════════════════════════════
+-- 11 ter) LAS CLAVES AJENAS QUE MIRABAN HACIA ADELANTE
+-- ═══════════════════════════════════════════════════════════
+-- maintenance_records se crea antes que workshops y car_parts, así
+-- que sus dos claves ajenas se añaden aquí, cuando ya existen.
+
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_records_workshop_id_fkey') THEN
+    ALTER TABLE maintenance_records
+      ADD CONSTRAINT maintenance_records_workshop_id_fkey
+      FOREIGN KEY (workshop_id) REFERENCES workshops(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_records_part_id_fkey') THEN
+    ALTER TABLE maintenance_records
+      ADD CONSTRAINT maintenance_records_part_id_fkey
+      FOREIGN KEY (part_id) REFERENCES car_parts(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+
+-- ═══════════════════════════════════════════════════════════
 -- 12) ÍNDICES
 -- ═══════════════════════════════════════════════════════════
 
@@ -263,6 +333,9 @@ CREATE INDEX IF NOT EXISTS idx_vehicle_todos_car ON vehicle_todos(car_id);
 CREATE INDEX IF NOT EXISTS idx_vehicle_todos_completed ON vehicle_todos(car_id, completed);
 CREATE INDEX IF NOT EXISTS idx_reminders_user ON reminders(user_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_user_due ON reminders(user_id, completed, due_date);
+CREATE INDEX IF NOT EXISTS idx_maintenance_part ON maintenance_records(part_id);
+CREATE INDEX IF NOT EXISTS idx_custom_jobs_car ON custom_jobs(car_id);
+CREATE INDEX IF NOT EXISTS idx_custom_jobs_date ON custom_jobs(date DESC);
 
 
 -- ═══════════════════════════════════════════════════════════
@@ -283,6 +356,7 @@ ALTER TABLE group_messages      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_invitations   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicle_todos       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reminders           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE custom_jobs         ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "profiles_all"        ON profiles;
 DROP POLICY IF EXISTS "cars_all"            ON cars;
@@ -298,6 +372,7 @@ DROP POLICY IF EXISTS "group_messages_all"  ON group_messages;
 DROP POLICY IF EXISTS "group_invitations_all" ON group_invitations;
 DROP POLICY IF EXISTS "vehicle_todos_all"   ON vehicle_todos;
 DROP POLICY IF EXISTS "reminders_all"       ON reminders;
+DROP POLICY IF EXISTS "custom_jobs_all"    ON custom_jobs;
 
 CREATE POLICY "profiles_all"        ON profiles            FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "cars_all"            ON cars                FOR ALL USING (true) WITH CHECK (true);
@@ -313,6 +388,7 @@ CREATE POLICY "group_messages_all"  ON group_messages      FOR ALL USING (true) 
 CREATE POLICY "group_invitations_all" ON group_invitations  FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "vehicle_todos_all"   ON vehicle_todos       FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "reminders_all"       ON reminders           FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "custom_jobs_all"    ON custom_jobs         FOR ALL USING (true) WITH CHECK (true);
 
 
 -- ═══════════════════════════════════════════════════════════

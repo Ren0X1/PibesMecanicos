@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react'
 import { Wrench, Plus, Trash2, Save, Edit2, Star, Phone, MapPin, MessageCircle } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
-import { getWorkshops, createWorkshop, deleteWorkshop, updateWorkshop, getCars, getMaintenanceRecords } from '../lib/api.js'
+import { getWorkshops, createWorkshop, deleteWorkshop, updateWorkshop, getCars, getMaintenanceRecords, getCustomJobs } from '../lib/api.js'
 import { Modal, Field, Loader } from './ui.jsx'
 import { t, useLang, fmtMoney } from '../lib/i18n.js'
-import { MAINT_TYPES, formatDate } from '../lib/constants.js'
+import { MAINT_TYPES, formatDate, maintLabel } from '../lib/constants.js'
 import TwoColumn, { useTwoCol, Panel, Figure, AttentionList } from './TwoColumn.jsx'
 
 function StarRating({ value, onChange }) {
@@ -77,7 +77,14 @@ export default function Workshops({ user, onToast }) {
       for (const car of cars) {
         for (const m of await getMaintenanceRecords(car.id)) {
           if (!m.workshop_id) continue
-          todo.push({ ...m, plate: car.plate })
+          todo.push({ ...m, plate: car.plate, vehicle_type: car.vehicle_type })
+        }
+        /* Y los trabajos libres, que se pagan en el mismo sitio. Se
+           traen con la misma forma —last_date— para que la lista y
+           el total no tengan que distinguirlos. */
+        for (const j of await getCustomJobs(car.id)) {
+          if (!j.workshop_id) continue
+          todo.push({ ...j, plate: car.plate, vehicle_type: car.vehicle_type, last_date: j.date, libre: true })
         }
       }
       setJobs(todo)
@@ -155,7 +162,10 @@ export default function Workshops({ user, onToast }) {
                   empty={ficha ? t('wsh.noHistory') : t('wsh.pickOne')}
                   items={suyos.slice(0, 8).map(j => ({
                     key: j.id,
-                    title: MAINT_TYPES.find(x => x.id === j.type_id)?.name || j.type_id,
+                    title: j.libre ? j.name
+                      : (MAINT_TYPES.find(x => x.id === j.type_id)
+                        ? maintLabel(MAINT_TYPES.find(x => x.id === j.type_id), j, j.vehicle_type)
+                        : j.type_id),
                     sub: `${j.plate} · ${formatDate(j.last_date)}`,
                     value: j.cost ? fmtMoney(j.cost) : null,
                     color: theme.accent,

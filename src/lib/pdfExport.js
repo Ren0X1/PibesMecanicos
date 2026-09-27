@@ -1,7 +1,7 @@
 import { t, getLocale, fmtNum } from './i18n.js'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { MAINT_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle } from './constants.js'
+import { getMaintStatus, formatDate, getMaintenanceForVehicle, maintName, hasSides, hasSideData, SIDES, sideLabel } from './constants.js'
 
 const C = {
   accent: [245, 158, 11], accentDark: [217, 119, 6],
@@ -94,7 +94,7 @@ function kpiBox(doc, x, y, w, h, label, value, color = C.accent, sublabel = null
   }
 }
 
-export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords = [], todos = [] }) {
+export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords = [], todos = [], jobs = [] }) {
   const doc = new jsPDF()
 
   // ─── PAGE 1: Cover + Executive Summary ───
@@ -221,15 +221,33 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
   y = 30
   y = sectionTitle(doc, y, t('rep.maintDetail'), C.blue)
 
+  /* Un eje con los dos lados apuntados ocupa dos líneas en la misma
+     celda: «izquierdo 186.400 km» y debajo el derecho. Así la tabla
+     no crece a lo ancho, que en un A4 no hay sitio. */
+  const porLados = (m, mt) => hasSides(mt, car.vehicle_type) && hasSideData(m)
+  const celdaKm = (m, mt) => {
+    if (!m) return '-'
+    if (!porLados(m, mt)) return `${(m.last_km || 0).toLocaleString()} km`
+    return SIDES.map(l => {
+      const km = m[`last_km_${l}`]
+      return `${sideLabel(l)} ${km != null ? `${km.toLocaleString()} km` : '-'}`
+    }).join('\n')
+  }
+  const celdaFecha = (m, mt) => {
+    if (!m) return ''
+    if (!porLados(m, mt)) return formatDate(m.last_date)
+    return SIDES.map(l => formatDate(m[`last_date_${l}`]) || '-').join('\n')
+  }
+
   const maintRows = getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
     const m = maintenance.find(x => x.type_id === mt.id)
     const status = m ? getMaintStatus(m, car.current_km) : null
     const statusText = !m ? t('common.noData') : status === 'ok' ? t('status.ok') : status === 'warn' ? t('status.warn') : t('status.overdue')
     return [
-      mt.name, statusText,
-      m ? `${(m.last_km || 0).toLocaleString()} km` : '-',
-      formatDate(m?.last_date),
-      m ? `${(m.next_km || 0).toLocaleString()} km` : '-',
+      maintName(mt, car.vehicle_type), statusText,
+      celdaKm(m, mt),
+      celdaFecha(m, mt),
+      m && m.next_km > 0 ? `${m.next_km.toLocaleString()} km` : '-',
       formatDate(m?.next_date),
       m?.cost ? `${(+m.cost).toFixed(0)} EUR` : '-',
     ]
@@ -254,6 +272,28 @@ export function exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRec
     },
     margin: { left: 14, right: 14 },
   })
+
+  // ─── Trabajos libres ───
+  if (jobs.length > 0) {
+    y = doc.lastAutoTable.finalY + 10
+    y = sectionTitle(doc, y, t('job.tab'), C.blue)
+    autoTable(doc, {
+      startY: y,
+      head: [[t('job.one'), t('common.date'), t('common.km'), t('common.cost'), t('common.notes')]],
+      body: [...jobs]
+        .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+        .map(j => [
+          j.name, formatDate(j.date), (j.km || 0).toLocaleString(),
+          j.cost ? `${(+j.cost).toFixed(0)} EUR` : '-', j.notes || '',
+        ]),
+      theme: 'plain',
+      headStyles: { fillColor: C.text, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, cellPadding: 4 },
+      bodyStyles: { fontSize: 8, textColor: C.text, cellPadding: 3.5 },
+      alternateRowStyles: { fillColor: C.lighter },
+      columnStyles: { 0: { fontStyle: 'bold' }, 3: { halign: 'right' } },
+      margin: { left: 14, right: 14 },
+    })
+  }
 
   // ─── Fuel page ───
   if (fuelLogs.length > 0) {

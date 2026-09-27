@@ -1,0 +1,75 @@
+name: Mantener la base despierta
+
+# Un proyecto de Supabase que no recibe una sola consulta se pausa
+# solo. Esto entra cada seis horas, mira el interruptor que hay en
+# el panel de administración y, si está puesto, hace un SELECT y
+# deja apuntado el toque.
+#
+# Usa los mismos secretos que el despliegue, así que no hay nada
+# que configurar aparte.
+#
+# OJO: mientras esta tarea exista, la comprobación del interruptor
+# ya es una consulta. Apagarlo desde el panel deja de hacer el
+# SELECT y de apuntar el toque, pero para que la base no reciba
+# NADA hay que desactivar este workflow en GitHub
+# (Actions → Mantener la base despierta → Disable workflow).
+
+on:
+  schedule:
+    # Cuatro veces al día, a y cuarto para no caer en el minuto en
+    # punto, que es cuando GitHub tiene más cola.
+    - cron: '15 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: 'keepalive'
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tocar la base si el interruptor está puesto
+        env:
+          URL: ${{ secrets.VITE_SUPABASE_URL }}
+          KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${URL}" ] || [ -z "${KEY}" ]; then
+            echo "Faltan los secretos VITE_SUPABASE_URL o VITE_SUPABASE_ANON_KEY."
+            exit 1
+          fi
+
+          api() {
+            # $1 método · $2 ruta · $3 cuerpo (opcional)
+            curl -sS -X "$1" "${URL}/rest/v1/$2" \
+              -H "apikey: ${KEY}" \
+              -H "Authorization: Bearer ${KEY}" \
+              -H "Content-Type: application/json" \
+              ${3:+-d "$3"}
+          }
+
+          echo "· Leyendo el interruptor"
+          ESTADO=$(api GET "app_settings?key=eq.keepalive&select=value")
+          PUESTO=$(printf '%s' "$ESTADO" | jq -r '.[0].value.on // false')
+
+          if [ "$PUESTO" != "true" ]; then
+            echo "El interruptor está apagado: no se toca la base."
+            exit 0
+          fi
+
+          echo "· SELECT de verdad"
+          # Cuenta de vehículos: barato, real, y no devuelve datos
+          # de nadie. Lo único que importa es que la base conteste.
+          api GET "cars?select=id&limit=1" > /dev/null
+
+          AHORA=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "· Apuntando el toque ($AHORA)"
+          api PATCH "app_settings?key=eq.keepalive_ping" \
+            "{\"value\":{\"at\":\"${AHORA}\",\"source\":\"github\"},\"updated_at\":\"${AHORA}\"}" > /dev/null
+
+          echo "Listo."
