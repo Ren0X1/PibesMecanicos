@@ -96,7 +96,7 @@ export default function Nav({ user, view, setView, onLogout, dataVersion, onTogg
                 borderRight: i < tabs.length - 1 ? `1px solid ${theme.border}` : 'none',
                 padding: '11px 0 13px', minHeight: 56, justifyContent: 'center', cursor: 'pointer',
                 color: on ? theme.accent : theme.mutedLight,
-                fontFamily: FONT.mono, fontSize: 8, fontWeight: 500,
+                fontFamily: FONT.mono, fontSize: 10, fontWeight: 500,
                 letterSpacing: '0.1em', textTransform: 'uppercase',
               }}>
                 {on && <span style={{
@@ -136,7 +136,7 @@ export default function Nav({ user, view, setView, onLogout, dataVersion, onTogg
                 borderBottom: `2px solid ${on ? theme.accent : 'transparent'}`,
                 cursor: 'pointer', whiteSpace: 'nowrap',
                 color: on ? theme.accent : theme.mutedLight,
-                fontFamily: FONT.mono, fontSize: 9.5, fontWeight: 500,
+                fontFamily: FONT.mono, fontSize: 11, fontWeight: 500,
                 letterSpacing: '0.13em', textTransform: 'uppercase',
               }}>
                 <Icon size={15} strokeWidth={1.8} /> {t.label}

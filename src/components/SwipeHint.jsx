@@ -46,7 +46,7 @@ export default function SwipeHint() {
       <ChevronLeft size={15} color={theme.accent} />
       <span style={{
         flex: 1, textAlign: 'center', color: theme.text,
-        fontFamily: FONT.mono, fontSize: 9, fontWeight: 500,
+        fontFamily: FONT.mono, fontSize: 11, fontWeight: 500,
         letterSpacing: '0.14em', textTransform: 'uppercase',
       }}>{t('swipe.hint')}</span>
       <ChevronRight size={15} color={theme.accent} />

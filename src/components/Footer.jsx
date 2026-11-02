@@ -51,7 +51,7 @@ export default function Footer({ style }) {
 
         {/* La coletilla solo cuando hay ancho de sobra */}
         {!mob && (
-          <span style={{ ...css.lbl, fontSize: 8.5, opacity: 0.55 }}>
+          <span style={{ ...css.lbl, fontSize: 10.5, opacity: 0.55 }}>
             {t('foot.rights')}
           </span>
         )}

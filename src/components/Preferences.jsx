@@ -43,7 +43,7 @@ export function LanguagePicker({ value, onChange }) {
             color: value === l.id ? theme.accent : theme.mutedLight,
           }}>{l.id.toUpperCase()}</span>
           <span style={{ fontSize: 14, fontWeight: 500 }}>{l.native}</span>
-          <span style={{ ...css.lbl, fontSize: 8.5 }}>{l.label}</span>
+          <span style={{ ...css.lbl, fontSize: 10.5 }}>{l.label}</span>
         </OptionRow>
       ))}
     </div>
@@ -64,7 +64,7 @@ export function ThemePicker({ value, onChange }) {
             <Icon size={17} color={value === o.id ? theme.accent : theme.mutedLight} style={{ flexShrink: 0, marginTop: 1 }} />
             <span style={{ minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 14, fontWeight: 600 }}>{o.label}</span>
-              <span style={{ ...css.lbl, fontSize: 9, letterSpacing: '0.06em', textTransform: 'none', display: 'block', marginTop: 3 }}>{o.note}</span>
+              <span style={{ ...css.lbl, fontSize: 11, letterSpacing: '0.06em', textTransform: 'none', display: 'block', marginTop: 3 }}>{o.note}</span>
             </span>
           </OptionRow>
         )
@@ -107,7 +107,7 @@ export function AccentPicker({ value, onChange, mode }) {
           )
         })}
       </div>
-      <p style={{ ...css.lbl, fontSize: 9, letterSpacing: '0.04em', textTransform: 'none', marginTop: 11, lineHeight: 1.5 }}>
+      <p style={{ ...css.lbl, fontSize: 11, letterSpacing: '0.04em', textTransform: 'none', marginTop: 11, lineHeight: 1.5 }}>
         {t('onb.accentNote')}
       </p>
     </div>
@@ -119,21 +119,21 @@ export function AccentPicker({ value, onChange, mode }) {
 function Preview() {
   return (
     <div style={{ border: `1px solid ${theme.border}`, background: theme.card, padding: 12 }}>
-      <div style={{ ...css.lbl, fontSize: 8, marginBottom: 9 }}>{t('onb.preview')}</div>
+      <div style={{ ...css.lbl, fontSize: 10, marginBottom: 9 }}>{t('onb.preview')}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 26, height: 26, background: theme.accent, color: theme.accentInk, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
           <Wrench size={15} strokeWidth={2.2} />
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ ...css.h3, fontSize: 13 }}>BMW 320d</div>
-          <div style={{ ...css.lbl, fontSize: 8, marginTop: 3 }}>187.450 km · 2016</div>
+          <div style={{ ...css.lbl, fontSize: 10, marginTop: 3 }}>187.450 km · 2016</div>
         </div>
         <span style={css.badge(theme.redSoft, theme.red)}>2</span>
         <span style={css.badge(theme.greenSoft, theme.green)}>OK</span>
       </div>
       <div style={{ marginTop: 11, display: 'flex', gap: 6 }}>
-        <span style={{ ...css.btn(), padding: '6px 10px', fontSize: 9 }}>{t('common.add')}</span>
-        <span style={{ ...css.btnOutline, padding: '6px 10px', fontSize: 9 }}>{t('common.edit')}</span>
+        <span style={{ ...css.btn(), padding: '6px 10px', fontSize: 11 }}>{t('common.add')}</span>
+        <span style={{ ...css.btnOutline, padding: '6px 10px', fontSize: 11 }}>{t('common.edit')}</span>
       </div>
     </div>
   )
@@ -204,7 +204,7 @@ export function Onboarding({ user, onDone }) {
             }} />
           ))}
         </div>
-        <div style={{ ...css.lbl, fontSize: 8.5, marginBottom: 16 }}>{t('onb.step', { n: step + 1 })}</div>
+        <div style={{ ...css.lbl, fontSize: 10.5, marginBottom: 16 }}>{t('onb.step', { n: step + 1 })}</div>
 
         <div style={{ borderTop: `2px solid ${theme.rule}`, paddingTop: 15 }}>
           <h2 style={{ ...css.h2, fontSize: 15, marginBottom: 13 }}>{steps[step].q}</h2>

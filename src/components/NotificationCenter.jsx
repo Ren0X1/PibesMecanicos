@@ -272,7 +272,7 @@ export default function NotificationCenter({ userId, isMobile, dataVersion }) {
                       <span style={{ fontSize: 15, flexShrink: 0 }}>{a.icon}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 12.5, fontWeight: 600, color: theme.text }}>{a.title}</div>
-                        <div style={{ ...css.lbl, fontSize: 8.5, marginTop: 2 }}>
+                        <div style={{ ...css.lbl, fontSize: 10.5, marginTop: 2 }}>
                           {t('notif.backIn', { n: daysLeft(snoozedMap[a.id]) })}
                         </div>
                       </div>

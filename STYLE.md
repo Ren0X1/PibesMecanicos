@@ -92,9 +92,15 @@ Dos costumbres que dan el carácter:
 
 - **Las cifras van en mono**, con `font-variant-numeric: tabular-nums`,
   para que una columna de importes quede alineada por la coma.
-- **Los rótulos son mono, diminutos, en mayúsculas y espaciados**
-  (`css.lbl`: 9–10 px, `letter-spacing` amplio). Un rótulo nunca
-  compite con el dato que rotula.
+- **Los rótulos son mono, pequeños y en mayúsculas** (`css.lbl`:
+  11 px, `letter-spacing: 0.08em`, en `muted`). Un rótulo nunca
+  compite con el dato que rotula, pero tiene que leerse: iban a
+  9 px, con mucho aire y en `mutedLight`, y al sol en un móvil no
+  se leían. **Nada por debajo de 10 px**, ni en un `style` suelto.
+- **Los iconos son de línea** (lucide), del color del texto que los
+  rodea. Los mantenimientos llevan el suyo en `src/lib/maintIcons.jsx`;
+  el emoji de `constants.js` queda solo para los avisos del sistema,
+  que no pintan componentes.
 
 ---
 
@@ -152,8 +158,15 @@ página.
 
 ## 6. Gráficas
 
-**Todas son de área**, sin excepción: `src/components/AreaChart.jsx`.
+**Todas las series son de área**: `src/components/AreaChart.jsx`.
 No queda ni una librería de gráficas en el proyecto.
+
+Lo que no es una serie no lleva área. El reparto del gasto entre
+vehículos (Resumen) es una **barra partida**: dos o tres `div` con
+su anchura, en el acento cada vez más apagado. Antes era un área
+entre dos matrículas, y la pendiente de en medio no significaba
+nada. La barra de estado de la ficha (vencido · próximo · al día ·
+sin apuntar) es lo mismo.
 
 - Dos siluetas apiladas: abajo el combustible, arriba el total.
   La franja de en medio es el taller.

@@ -15,6 +15,11 @@ import { t, useLang, fmtNum, fmtMoney, fmtMonth } from '../lib/i18n.js'
    signifiquen lo mismo en toda la aplicación. */
 const SERIES = { maint: () => theme.accent, fuel: () => theme.green }
 
+/* Los trozos del reparto por vehículo: el acento, cada vez más
+   apagado. Un solo color, como pide Acero; el orden ya va de mayor
+   a menor, así que el más fuerte es el que más gasta. */
+const repartoTono = (i) => theme.accent + ['', 'B3', '73', '40'][Math.min(i, 3)]
+
 export default function UserStats({ user, onToast }) {
   useLang()
   const mob = useIsMobile()
@@ -342,27 +347,44 @@ export default function UserStats({ user, onToast }) {
             {stats.spendPie.length > 1 && (
               <div style={{ ...css.card, padding: mob ? 12 : 20 }}>
                 <h3 style={{ ...css.h3, marginBottom: 16 }}>{t('stats.distribution')}</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {/* Ordenado de mayor a menor: la silueta baja sola y
-                      se lee como un reparto entre vehículos. */}
-                  <AreaChart
-                    data={stats.spendPie.map(v => ({ label: v.name, total: v.value }))}
-                    height={mob ? 130 : 160}
-                    showLabels
-                  />
-                  <div style={{ flex: 1, width: '100%' }}>
-                    {stats.spendPie.map((v, i) => (
-                      <div key={v.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
-                        <span style={{ ...css.num, fontSize: 11, color: theme.mutedLight, width: 16, flexShrink: 0 }}>{i + 1}</span>
-                        <span style={{ flex: 1, color: theme.text }}>{v.name}</span>
-                        <span style={{ ...css.num, fontWeight: 700, color: theme.text }}>{fmtMoney(v.value)}</span>
-                        <span style={{ color: theme.muted, fontSize: 11, width: 40, textAlign: 'right' }}>
-                          {stats.grandTotal > 0 ? ((v.value / stats.grandTotal) * 100).toFixed(0) : 0}%
-                        </span>
+                {/* Un reparto no es una serie: entre un vehículo y otro
+                    no hay meses, así que un área dibujaba una pendiente
+                    que no significaba nada. Una barra partida, sin
+                    librería: cada vehículo, su trozo. */}
+                {(() => {
+                  const pct = v => (stats.grandTotal > 0 ? (v.value / stats.grandTotal) * 100 : 0)
+                  const tono = i => repartoTono(i)
+                  return (
+                    <>
+                      <div style={{ display: 'flex', height: 34, gap: 2, marginBottom: 8 }}>
+                        {stats.spendPie.map((v, i) => (
+                          <div key={v.name} title={`${v.name} · ${fmtMoney(v.value)}`} style={{
+                            flex: v.value, minWidth: 2, background: tono(i),
+                            display: 'flex', alignItems: 'center', padding: '0 10px', overflow: 'hidden',
+                            ...css.num, fontSize: 12.5, fontWeight: 600, color: i < 2 ? theme.accentInk : theme.white,
+                          }}>
+                            {pct(v) >= 12 ? `${pct(v).toFixed(0)} %` : ''}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                      <div>
+                        {stats.spendPie.map((v, i) => (
+                          <div key={v.name} style={{
+                            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', fontSize: 13.5,
+                            borderBottom: i < stats.spendPie.length - 1 ? `1px solid ${theme.border}` : 'none',
+                          }}>
+                            <span style={{ width: 10, height: 10, background: tono(i), flexShrink: 0 }} />
+                            <span style={{ flex: 1, color: theme.white, fontWeight: 600, minWidth: 0 }}>{v.name}</span>
+                            <span style={{ ...css.num, fontWeight: 600, color: theme.white }}>{fmtMoney(v.value)}</span>
+                            <span style={{ ...css.num, color: theme.muted, fontSize: 12, width: 44, textAlign: 'right' }}>
+                              {pct(v).toFixed(0)} %
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             )}
             </TwoColumn>

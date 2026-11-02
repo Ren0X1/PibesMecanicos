@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
-  Wrench, Edit2, Trash2, ChevronLeft, Gauge, Calendar,
-  Fuel, Settings, TrendingUp, Save, AlertTriangle, CheckCircle,
-  Clock, Plus, Package, ExternalLink, FileDown, Euro, CheckSquare, FileText, FileSpreadsheet,
+  Wrench, Edit2, Trash2, ChevronLeft, ChevronDown, Calendar,
+  Fuel, Settings, TrendingUp, Save, Car, Bike,
+  Plus, Package, ExternalLink, FileDown, Euro, CheckSquare, FileText, FileSpreadsheet,
   Link2, Hammer
 } from 'lucide-react'
 import { theme, css } from '../lib/theme.js'
@@ -17,9 +17,10 @@ import {
   MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, getMaintStatus, formatDate,
   getMaintenanceForVehicle, fuelLabel, transLabel,
   maintName, maintDefKm, maintDefMonths, hasSides, hasSideData, worstOf, worstSide,
-  SIDES, sideLabel, sideShort, nextFrom,
+  SIDES, sideLabel, sideShort, nextFrom, byUrgency,
 } from '../lib/constants.js'
-import { Modal, Field, Stat, StatusBadge, Loader, ResponsiveGrid2, DateInput, NumInput } from './ui.jsx'
+import { Modal, Field, Loader, ResponsiveGrid2, DateInput, NumInput, useConfirm } from './ui.jsx'
+import { MaintIcon } from '../lib/maintIcons.jsx'
 import SwipeArea, { useEdgeBack } from './SwipeArea.jsx'
 import { t, useLang, fmtNum, fmtMoney } from '../lib/i18n.js'
 import FuelTab from './FuelTab.jsx'
@@ -35,29 +36,29 @@ const today = new Date().toISOString().split('T')[0]
 
 /* ── Tab Bar ── */
 function TabBar({ tabs, active, onChange, isMobile }) {
-  // On mobile, lay tabs out in a grid so they're ALL visible (no horizontal scroll).
-  // <=4 tabs -> single row; more -> 3 columns wrapping into rows.
-  const cols = tabs.length <= 4 ? tabs.length : 3
-  /* Desde la sexta pestaña el rótulo largo no cabe y se cortaba
-     («Mantenimie…»). Se aprieta el botón en vez de acortar la
-     palabra: sigue leyéndose entera. */
+  /* Una sola fila, con el filete del acento bajo la elegida, que es
+     como Acero marca lo seleccionado. En el móvil la fila se desliza
+     de lado: antes eran tres filas de botones que empujaban la lista
+     media pantalla hacia abajo. Desde la sexta pestaña, en ancho, se
+     aprieta el botón en vez de cortar la palabra. */
   const apretado = !isMobile && tabs.length > 5
   return (
     <div style={{
-      marginBottom: 16, background: theme.bg, borderRadius: 0, padding: 4,
-      ...(isMobile
-        ? { display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: 4 }
-        : { display: 'flex', gap: 4 }),
+      marginBottom: 16, display: 'flex', gap: 0,
+      borderBottom: `1px solid ${theme.border}`,
+      ...(isMobile ? { overflowX: 'auto', scrollbarWidth: 'none' } : {}),
     }}>
       {tabs.map(t => (
-        <button key={t.id} onClick={() => onChange(t.id)} style={{
-          display: 'flex', alignItems: 'center', gap: isMobile ? 4 : (apretado ? 5 : 6),
-          flex: isMobile ? undefined : 1, justifyContent: 'center',
-          background: active === t.id ? theme.card : 'transparent',
+        <button key={t.id} onClick={() => onChange(t.id)} aria-current={active === t.id ? 'page' : undefined} style={{
+          display: 'flex', alignItems: 'center', gap: apretado ? 6 : 7,
+          flex: isMobile ? 'none' : 1, justifyContent: 'center',
+          background: 'transparent',
           color: active === t.id ? theme.white : theme.muted,
-          border: active === t.id ? `1px solid ${theme.border}` : '1px solid transparent',
-          borderRadius: 0, padding: isMobile ? '9px 6px' : (apretado ? '9px 8px' : '9px 16px'), cursor: 'pointer', fontWeight: 600,
-          fontSize: isMobile ? 12 : (apretado ? 12.5 : 13), fontFamily: 'inherit', transition: 'all .15s', position: 'relative',
+          border: 'none', borderBottom: `3px solid ${active === t.id ? theme.accent : 'transparent'}`,
+          marginBottom: -1,
+          borderRadius: 0, padding: isMobile ? '12px 14px' : (apretado ? '11px 8px' : '11px 16px'), cursor: 'pointer',
+          fontWeight: active === t.id ? 600 : 500,
+          fontSize: isMobile ? 14 : (apretado ? 13 : 13.5), fontFamily: 'inherit', transition: 'color .15s', position: 'relative',
           whiteSpace: 'nowrap', minWidth: 0,
         }}>
           {t.icon}
@@ -123,54 +124,353 @@ function PartChip({ part, onClick }) {
   )
 }
 
-function MaintCard({ mt, record, currentKm, vehicleType, part, onEdit, onDelete, onOpenPart }) {
-  const status = record ? getMaintStatus(record, currentKm) : null
-  const porLados = hasSides(mt, vehicleType) && hasSideData(record)
-  const color = colorEstado(status)
-  const conProximo = record && (record.next_km > 0 || record.next_date)
+/* ─────────────────────────────────────────────────────────────
+   La lista de mantenimientos, ordenada por lo que toca
+
+   La ficha contesta una pregunta: ¿qué le toca a este vehículo?
+   Antes eran veinticuatro filas del mismo peso en el orden fijo de
+   la lista, con las vencidas perdidas entre las que no tienen
+   datos. Ahora van en grupos —vencido, próximo, al día— y, dentro
+   de cada uno, por lo que antes toca. Lo que nunca se ha
+   apuntado se recoge al final en fichas de «+».
+   ───────────────────────────────────────────────────────────── */
+
+/* Lo que se lee en la columna «Queda»: la cifra y una línea debajo.
+   Un próximo a cero no es un vencido: es una pieza sin intervalo. */
+function quedaDe(record, status, progress) {
+  const fecha = record.next_date ? formatDate(record.next_date) : null
+  const color = status === 'overdue' ? theme.red : status === 'warn' ? theme.yellow : theme.white
+  const { kmLeft, daysLeft } = progress || {}
+  if (kmLeft != null) {
+    if (kmLeft <= 0) {
+      return { main: t('maint.overBy', { km: fmtNum(-kmLeft) }), sub: t('maint.dueAt', { km: fmtNum(record.next_km) }), color }
+    }
+    /* Quedan km pero la fecha ya pasó: manda la fecha. */
+    if (daysLeft != null && daysLeft <= 0) {
+      return { main: t('maint.dateOver', { date: fecha }), sub: `${fmtNum(kmLeft)} ${t('common.km')}`, color }
+    }
+    return { main: `${fmtNum(kmLeft)} ${t('common.km')}`, sub: fecha ? t('maint.orOn', { date: fecha }) : null, color }
+  }
+  if (fecha) {
+    return { main: daysLeft != null && daysLeft <= 0 ? t('maint.dateOver', { date: fecha }) : fecha, sub: null, color }
+  }
+  return { main: t('maint.noInterval'), sub: null, color: theme.muted, quiet: true }
+}
+
+const colorBarra = (status) =>
+  status === 'overdue' ? theme.red : status === 'warn' ? theme.yellow : theme.mutedLight
+
+/* La vida gastada, en un trazo fino. Solo lleva color cuando hay
+   que hacer algo; lo que está al día se queda en gris. */
+function VidaBar({ fraction, status, width = 110 }) {
+  if (fraction == null) return <span style={{ display: 'block', textAlign: 'right', color: theme.mutedLight }}>—</span>
   return (
-    <div onClick={onEdit}
-      style={{ ...css.card, padding: 14, marginBottom: 8, cursor: 'pointer' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 16 }}>{mt.emoji}</span>
-          <span style={{ fontWeight: 600, fontSize: 13 }}>{maintName(mt, vehicleType)}</span>
-        </div>
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          {status ? <StatusBadge status={status} /> : <span style={css.lbl}>{t('common.noData')}</span>}
-        </div>
+    <div style={{ height: 3, width, background: theme.border, marginLeft: 'auto' }}
+      role="img" aria-label={`${Math.round(fraction * 100)} %`}>
+      <div style={{ height: '100%', width: `${Math.round(fraction * 100)}%`, background: colorBarra(status) }} />
+    </div>
+  )
+}
+
+/* Los mantenimientos del vehículo, repartidos en grupos. */
+function agrupar(types, maintenance, currentKm) {
+  const apuntados = [], vacios = []
+  types.forEach(mt => {
+    const record = maintenance.find(x => x.type_id === mt.id)
+    if (record) apuntados.push({ mt, record })
+    else vacios.push(mt)
+  })
+  const ordenados = byUrgency(apuntados, currentKm)
+  return {
+    overdue: ordenados.filter(x => x.status === 'overdue'),
+    warn: ordenados.filter(x => x.status === 'warn'),
+    ok: ordenados.filter(x => x.status === 'ok'),
+    empty: vacios,
+  }
+}
+
+const GRUPOS = [
+  { id: 'overdue', label: () => t('car.statOverdue'), color: () => theme.red },
+  { id: 'warn', label: () => t('car.statWarn'), color: () => theme.yellow },
+  { id: 'ok', label: () => t('car.statOk'), color: () => theme.green },
+]
+
+function GrupoTitulo({ label, n, color, extra, mob }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 9,
+      padding: mob ? '14px 16px 6px' : '18px 20px 8px',
+      fontSize: 13.5, fontWeight: 600, color: theme.white,
+    }}>
+      <span style={{ width: 8, height: 8, background: color, flexShrink: 0 }} />
+      {label}
+      <span style={{ ...css.num, color: theme.muted, fontWeight: 500 }}>{n}</span>
+      {extra && <span style={{ fontWeight: 400, color: theme.muted, fontSize: 12.5 }}>· {extra}</span>}
+    </div>
+  )
+}
+
+/* Las piezas que nunca se han apuntado: una ficha por pieza, y un
+   toque abre su formulario. Antes era una fila entera de «sin
+   datos» por cada una. */
+function Vacios({ items, vehicleType, onAdd, mob }) {
+  if (!items.length) return null
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: mob ? '4px 16px 16px' : '4px 20px 20px' }}>
+      {items.map(mt => (
+        <button key={mt.id} type="button" onClick={() => onAdd(mt.id)} style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'transparent', color: theme.text, cursor: 'pointer',
+          border: `1px dashed ${theme.rule}`, padding: mob ? '9px 11px' : '6px 10px',
+          fontFamily: 'inherit', fontSize: 13, transition: 'border-color .15s',
+        }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = theme.accent }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = theme.rule }}>
+          <Plus size={13} color={theme.accent} /> {maintName(mt, vehicleType)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/* ── Escritorio: una tabla, con los grupos como filas de título ── */
+function MaintTable({ grupos, vehicleType, parts, onEdit, onOpenPart }) {
+  const total = grupos.overdue.length + grupos.warn.length + grupos.ok.length + grupos.empty.length
+  const lapiz = (fila, o) => { const l = fila.querySelector('[data-lapiz]'); if (l) l.style.opacity = o }
+  const fila = ({ mt, record, status, progress }) => {
+    const q = quedaDe(record, status, progress)
+    const porLados = hasSides(mt, vehicleType) && hasSideData(record)
+    const peor = porLados ? worstSide(record) : null
+    const recambio = parts.find(x => x.id === record.part_id) || null
+    return (
+      <tr key={mt.id} style={{ cursor: 'pointer' }}
+        onClick={() => onEdit(mt.id)}
+        onMouseEnter={e => { e.currentTarget.style.background = theme.cardHover; lapiz(e.currentTarget, 1) }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; lapiz(e.currentTarget, 0.35) }}>
+        <td style={{ ...css.td, paddingLeft: 20, fontWeight: 600, color: theme.white }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+            <MaintIcon id={mt.id} color={theme.muted} />
+            {maintName(mt, vehicleType)}
+          </span>
+          {recambio && (
+            <div style={{ marginTop: 5, marginLeft: 25 }}>
+              <PartChip part={recambio} onClick={onOpenPart} />
+            </div>
+          )}
+        </td>
+        <td style={{ ...css.td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+          <div style={{ ...css.num, fontSize: 14, fontWeight: q.quiet ? 400 : 600, color: q.color }}>{q.main}</div>
+          {q.sub && <div style={{ ...css.num, fontSize: 11.5, color: theme.muted, marginTop: 2 }}>{q.sub}</div>}
+        </td>
+        <td style={{ ...css.td, width: 130 }}>
+          <VidaBar fraction={progress?.fraction} status={status} />
+        </td>
+        <td style={{ ...css.td, textAlign: 'right', whiteSpace: 'nowrap', color: theme.muted }}>
+          {porLados ? (
+            <div style={{ display: 'grid', gap: 2, justifyItems: 'end' }}>
+              {SIDES.map(lado => (
+                <div key={lado} style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                  <span style={{ ...css.lbl, fontSize: 10 }}>{sideShort(lado)}</span>
+                  <span style={{ ...css.num, fontSize: 12.5, color: lado === peor ? theme.white : theme.muted }}>
+                    {record[`last_km_${lado}`] != null ? fmtNum(record[`last_km_${lado}`]) : '—'}
+                    {' · '}
+                    {record[`last_date_${lado}`] ? formatDate(record[`last_date_${lado}`]) : '—'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <span style={{ ...css.num, fontSize: 12.5 }}>
+              {record.last_km != null ? fmtNum(record.last_km) : '—'} · {record.last_date ? formatDate(record.last_date) : '—'}
+            </span>
+          )}
+        </td>
+        <td style={{ ...css.td, ...css.num, textAlign: 'right', whiteSpace: 'nowrap', color: record.cost ? theme.white : theme.mutedLight }}>
+          {record.cost ? fmtMoney(record.cost) : '—'}
+        </td>
+        <td style={{ ...css.td, width: 40, textAlign: 'center' }}>
+          <span data-lapiz style={{ opacity: 0.35, color: theme.muted, transition: 'opacity .15s', display: 'inline-flex' }}
+            aria-label={t('common.edit')}>
+            <Edit2 size={14} />
+          </span>
+        </td>
+      </tr>
+    )
+  }
+  const titulo = (g, n) => (
+    <tr key={`g-${g.id}`}>
+      <td colSpan={6} style={{ padding: 0 }}>
+        <GrupoTitulo label={g.label()} n={n} color={g.color()} />
+      </td>
+    </tr>
+  )
+  return (
+    <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th style={{ ...css.th, paddingLeft: 20 }}>{t('car.element')}</th>
+              <th style={{ ...css.th, textAlign: 'right' }}>{t('car.left')}</th>
+              <th style={{ ...css.th, textAlign: 'right' }}>{t('car.life')}</th>
+              <th style={{ ...css.th, textAlign: 'right' }}>{t('car.lastLabel')}</th>
+              <th style={{ ...css.th, textAlign: 'right' }}>{t('common.cost')}</th>
+              <th style={css.th} />
+            </tr>
+          </thead>
+          <tbody>
+            {GRUPOS.flatMap(g => grupos[g.id].length
+              ? [titulo(g, grupos[g.id].length), ...grupos[g.id].map(fila)]
+              : [])}
+          </tbody>
+        </table>
       </div>
-
-      {record && porLados && <SideLines record={record} color={color} />}
-
-      {record && !porLados && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, fontSize: 12, color: theme.muted }}>
-          <span>{t('car.lastLabel')}: {fmtNum(record.last_km)} {t('common.km')}</span>
-          <span>{t('car.dateLabel')}: {formatDate(record.last_date) || '—'}</span>
-        </div>
+      {grupos.empty.length > 0 && (
+        <>
+          <GrupoTitulo label={t('maint.notLogged')} n={grupos.empty.length} color={theme.rule}
+            extra={t('maint.tapToLog')} />
+          <Vacios items={grupos.empty} vehicleType={vehicleType} onAdd={onEdit} />
+        </>
       )}
+      {total === 0 && <p style={{ ...css.lbl, padding: 20 }}>{t('common.noData')}</p>}
+    </div>
+  )
+}
 
-      {conProximo && (
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: porLados ? 6 : 4, paddingLeft: porLados ? 10 : 0 }}>
-          <span style={{ ...css.lbl, width: porLados ? 66 : 'auto', flexShrink: 0 }}>{t('car.nextLabel')}</span>
-          <span style={{ ...css.num, fontSize: 12, fontWeight: 600, color: theme.text }}>
-            {record.next_km > 0 ? `${fmtNum(record.next_km)} ${t('common.km')}` : '—'}
+/* ── Móvil: filas de 60 px; lo que no urge, plegado ── */
+function MaintListMobile({ grupos, vehicleType, onEdit }) {
+  /* Si no hay nada vencido ni próximo, lo que está al día arranca
+     abierto: una pantalla con dos grupos plegados no dice nada. */
+  const nadaUrgente = !grupos.overdue.length && !grupos.warn.length
+  const [abiertos, setAbiertos] = useState({ ok: nadaUrgente, empty: false })
+  const alternar = id => setAbiertos(a => ({ ...a, [id]: !a[id] }))
+
+  const fila = ({ mt, record, status, progress }) => {
+    const q = quedaDe(record, status, progress)
+    return (
+      <button key={mt.id} type="button" onClick={() => onEdit(mt.id)} style={{
+        display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 60,
+        padding: '10px 16px 10px 0', background: 'transparent', border: 'none',
+        borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left',
+        fontFamily: 'inherit', color: theme.text,
+      }}>
+        <span style={{ width: 3, alignSelf: 'stretch', background: status === 'ok' ? 'transparent' : colorBarra(status), flexShrink: 0 }} />
+        <MaintIcon id={mt.id} color={theme.muted} size={16} />
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', color: theme.white, fontWeight: 600, fontSize: 14.5 }}>{maintName(mt, vehicleType)}</span>
+          <span style={{ display: 'block', ...css.num, fontSize: 12, color: theme.muted, marginTop: 2 }}>
+            {record.last_km != null ? fmtNum(record.last_km) : '—'}{record.last_date ? ` · ${formatDate(record.last_date)}` : ''}
           </span>
-          <span style={{ ...css.num, fontSize: 11, color: theme.mutedLight }}>
-            {record.next_date ? formatDate(record.next_date) : ''}
-          </span>
+        </span>
+        <span style={{ textAlign: 'right', flexShrink: 0 }}>
+          <span style={{ display: 'block', ...css.num, fontSize: 14, fontWeight: q.quiet ? 400 : 600, color: q.color }}>{q.main}</span>
+          {q.sub && <span style={{ display: 'block', ...css.num, fontSize: 11.5, color: theme.muted, marginTop: 2 }}>{q.sub}</span>}
+        </span>
+      </button>
+    )
+  }
+
+  const plegable = (id, label, color, n, contenido) => (
+    <div key={id}>
+      <button type="button" onClick={() => alternar(id)} aria-expanded={abiertos[id]} style={{
+        display: 'flex', alignItems: 'center', gap: 9, width: '100%', minHeight: 48,
+        padding: '0 16px', background: 'transparent', border: 'none',
+        borderBottom: `1px solid ${theme.border}`, cursor: 'pointer',
+        fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: theme.white, textAlign: 'left',
+      }}>
+        <span style={{ width: 8, height: 8, background: color, flexShrink: 0 }} />
+        <span style={{ flex: 1 }}>{label} <span style={{ ...css.num, color: theme.muted, fontWeight: 500 }}>{n}</span></span>
+        <ChevronDown size={16} color={theme.muted}
+          style={{ transform: abiertos[id] ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+      </button>
+      {abiertos[id] && contenido}
+    </div>
+  )
+
+  return (
+    <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
+      {['overdue', 'warn'].map(id => {
+        const g = GRUPOS.find(x => x.id === id)
+        return grupos[id].length > 0 && (
+          <div key={id}>
+            <GrupoTitulo label={g.label()} n={grupos[id].length} color={g.color()} mob />
+            {grupos[id].map(fila)}
+          </div>
+        )
+      })}
+      {grupos.ok.length > 0 && plegable('ok', t('car.statOk'), theme.green, grupos.ok.length, grupos.ok.map(fila))}
+      {grupos.empty.length > 0 && plegable('empty', t('maint.notLogged'), theme.rule, grupos.empty.length,
+        <div style={{ paddingTop: 12 }}><Vacios items={grupos.empty} vehicleType={vehicleType} onAdd={onEdit} mob /></div>)}
+    </div>
+  )
+}
+
+/* ── La cifra que responde ──────────────────────────────────────
+   En vez de cuatro recuadros que cuentan (6 · 2 · 2), lo que toca:
+   la pieza más urgente y cuánto le queda. Si dos van a la par —el
+   aceite y su filtro—, se dicen juntas. Los conteos se quedan en
+   una barra con el estado de todas las piezas. */
+function LeadStrip({ grupos, currentKm, vehicleType, mob }) {
+  const apuntados = [...grupos.overdue, ...grupos.warn, ...grupos.ok]
+  const primero = apuntados.find(x => x.record.next_km > 0 || x.record.next_date) || null
+  const aLaPar = primero
+    ? apuntados.filter(x => x.status === primero.status
+        && Number(x.record.next_km || 0) === Number(primero.record.next_km || 0)
+        && (x.record.next_date || '') === (primero.record.next_date || ''))
+    : []
+  const q = primero ? quedaDe(primero.record, primero.status, primero.progress) : null
+  const n = { overdue: grupos.overdue.length, warn: grupos.warn.length, ok: grupos.ok.length, empty: grupos.empty.length }
+  const total = n.overdue + n.warn + n.ok + n.empty
+  const tramos = [
+    { id: 'overdue', n: n.overdue, color: theme.red, label: t('car.statOverdue') },
+    { id: 'warn', n: n.warn, color: theme.yellow, label: t('car.statWarn') },
+    { id: 'ok', n: n.ok, color: theme.green, label: t('car.statOk') },
+    { id: 'empty', n: n.empty, color: theme.border, dot: theme.rule, label: t('maint.notLogged') },
+  ].filter(x => x.n > 0)
+  const celda = { padding: mob ? '14px 16px' : '18px 22px', minWidth: 0 }
+  const separa = mob ? { borderTop: `1px solid ${theme.border}` } : { borderLeft: `1px solid ${theme.border}` }
+  const cifra = { ...css.num, fontSize: mob ? 24 : 30, fontWeight: 600, lineHeight: 1.1, marginTop: 6 }
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: mob ? '1fr' : 'minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.3fr)',
+      background: theme.card, border: `1px solid ${theme.border}`, marginBottom: mob ? 16 : 22,
+    }}>
+      <div style={celda}>
+        <div style={css.lbl}>{t('car.nextUp')}</div>
+        {q ? (
+          <>
+            <div style={{ ...cifra, color: q.color }}>
+              {q.main}
+              {q.sub && <span style={{ fontSize: 14, color: theme.muted, fontWeight: 500, marginLeft: 8 }}>{q.sub}</span>}
+            </div>
+            <div style={{ fontSize: 14, color: theme.text, marginTop: 6 }}>
+              {aLaPar.map(x => maintName(x.mt, vehicleType)).join(' · ')}
+            </div>
+          </>
+        ) : (
+          <div style={{ fontSize: 14, color: theme.muted, marginTop: 8 }}>{t('car.nextNone')}</div>
+        )}
+      </div>
+      {/* En el móvil los km ya van en la cabecera. */}
+      {!mob && (
+        <div style={{ ...celda, ...separa }}>
+          <div style={css.lbl}>{t('car.tabKm')}</div>
+          <div style={{ ...cifra, color: theme.white }}>{fmtNum(currentKm)}</div>
         </div>
       )}
-
-      {part && (
-        <div style={{ marginTop: 8 }}>
-          <PartChip part={part} onClick={onOpenPart} />
+      <div style={{ ...celda, ...separa }}>
+        <div style={css.lbl}>{t('car.healthOf', { n: total })}</div>
+        <div style={{ display: 'flex', gap: 2, height: 10, margin: '12px 0 10px' }}>
+          {tramos.map(x => <div key={x.id} style={{ flex: x.n, background: x.color }} />)}
         </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 4, marginTop: 8, justifyContent: 'flex-end' }}>
-        <button onClick={e => { e.stopPropagation(); onEdit() }} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
-        {record && <button onClick={e => { e.stopPropagation(); onDelete() }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12.5, color: theme.muted }}>
+          {tramos.map(x => (
+            <span key={x.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+              <span style={{ width: 8, height: 8, background: x.dot || x.color }} />
+              {x.label} <span style={{ ...css.num, color: theme.text }}>{x.n}</span>
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -236,7 +536,8 @@ function ScopePicker({ value, onChange }) {   // value null = ninguno
 /* Se exporta solo para poder probarlo: que abrir esta ficha y
    guardar sin elegir lado NO toque los lados es la clase de fallo
    que hay que dejar clavada con un test. */
-export function MaintModal({ open, onClose, onSave, typeId, existing, currentKm, vehicleType, workshops = [], parts = [], onOpenPart }) {
+export function MaintModal({ open, onClose, onSave, onDelete, typeId, existing, currentKm, vehicleType, workshops = [], parts = [], onOpenPart }) {
+  const confirmar = useConfirm()
   const mtype = MAINT_TYPES.find(x => x.id === typeId)
   const porLados = hasSides(mtype, vehicleType)
   const defKm = maintDefKm(mtype, vehicleType)
@@ -318,7 +619,11 @@ export function MaintModal({ open, onClose, onSave, typeId, existing, currentKm,
   const hayGuardado = porLados && (guardados.izq || guardados.der)
 
   return (
-    <Modal open={open} onClose={onClose} title={`${mtype?.emoji || '🔧'} ${maintName(mtype, vehicleType) || t('common.maintenance')}`}>
+    <Modal open={open} onClose={onClose} title={
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}>
+        <MaintIcon id={typeId} size={17} />{maintName(mtype, vehicleType) || t('common.maintenance')}
+      </span>
+    }>
       <p style={{ ...css.subtitle, marginBottom: 16 }}>
         {t('car.interval')}: {defKm ? `${fmtNum(defKm)} km` : '—'}{defMeses ? t('car.everyMonths', { n: defMeses }) : ''}
       </p>
@@ -396,6 +701,18 @@ export function MaintModal({ open, onClose, onSave, typeId, existing, currentKm,
         <input style={css.input} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder={t('car.maintNotesPh')} />
       </Field>
       <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
+        {/* La papelera vivía en cada fila de la lista, al lado del
+            lápiz: un toque mal dado y se iba lo apuntado. Ahora está
+            aquí dentro, y pregunta. */}
+        {existing && onDelete && (
+          <button type="button" style={{ ...css.btnOutline, color: theme.red, marginRight: 'auto' }}
+            onClick={async () => {
+              if (!await confirmar(t('maint.deleteConfirm', { name: maintName(mtype, vehicleType) }))) return
+              await onDelete()
+            }}>
+            <Trash2 size={13} /> {t('common.delete')}
+          </button>
+        )}
         <button onClick={onClose} style={css.btnOutline}>{t('common.cancel')}</button>
         <button onClick={handleSave} disabled={saving} style={css.btn()}><Save size={14} /> {saving ? t('common.saving') : t('common.save')}</button>
       </div>
@@ -821,11 +1138,11 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
      se van a una columna fija que no cambia al cambiar de pestaña. */
   const { two } = useTwoCol()
 
-  const stats = useMemo(() => {
-    let ok = 0, warn = 0, overdue = 0
-    maintenance.forEach(m => { const s = getMaintStatus(m, car.current_km); if (s === 'ok') ok++; else if (s === 'warn') warn++; else overdue++ })
-    return { ok, warn, overdue }
-  }, [maintenance, car.current_km])
+  /* Los mantenimientos repartidos por lo que toca. De aquí salen la
+     franja de arriba y la lista, así que las dos cuentan lo mismo. */
+  const grupos = useMemo(
+    () => agrupar(getMaintenanceForVehicle(car.vehicle_type, car.fuel), maintenance, car.current_km),
+    [maintenance, car.current_km, car.vehicle_type, car.fuel])
 
   const handleSaveKm = async (data) => {
     try {
@@ -905,14 +1222,18 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
       <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 16, padding: mob ? '6px 12px' : '8px 16px' }}><ChevronLeft size={14} /> {t('common.back')}</button>
 
       {/* Header */}
-      <div style={{ ...css.card, padding: mob ? 16 : 24, marginBottom: 16, background: `linear-gradient(135deg, ${theme.card} 0%, #2e2a1a 100%)` }}>
+      <div style={{ ...css.card, padding: mob ? 16 : 22, marginBottom: 14 }}>
         <div style={{ display: 'flex', flexDirection: mob ? 'column' : 'row', justifyContent: 'space-between', gap: mob ? 12 : 0 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-              <h2 style={{ ...css.h1, fontSize: mob ? 22 : 28 }}>{car.vehicle_type === 'moto' ? '🏍️' : '🚗'} {car.brand} {car.model}</h2>
+              <h2 style={{ ...css.h1, fontSize: mob ? 22 : 28 }}>{car.brand} {car.model}</h2>
               <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
             </div>
             <div style={{ display: 'flex', gap: mob ? 10 : 16, marginTop: 6, flexWrap: 'wrap', fontSize: mob ? 12 : 13 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}>
+                {car.vehicle_type === 'moto' ? <Bike size={13} /> : <Car size={13} />} {VEHICLE_TYPES.find(v => v.value === (car.vehicle_type || 'coche'))?.label}
+              </span>
+              {mob && <span style={{ ...css.num, display: 'flex', alignItems: 'center', color: theme.white }}>{fmtNum(car.current_km)} {t('common.km')}</span>}
               <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Calendar size={13} /> {car.year}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Settings size={13} /> {transLabel(car.transmission)}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Fuel size={13} /> {fuelLabel(car.fuel)}</span>
@@ -924,7 +1245,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
             </button>
             <div style={{ position: 'relative' }}>
               <button onClick={() => setShowExportMenu(!showExportMenu)}
-                style={{ ...css.btnOutline, color: theme.muted, borderColor: 'rgba(139,92,246,0.3)' }} title={t('car.export')}>
+                style={{ ...css.btnOutline, color: theme.muted }} title={t('car.export')} aria-label={t('car.export')}>
                 <FileDown size={14} />
               </button>
               {showExportMenu && (
@@ -976,18 +1297,12 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
                 </>
               )}
             </div>
-            <button onClick={() => setShowEditCar(true)} style={css.btnOutline}><Edit2 size={14} /></button>
+            <button onClick={() => setShowEditCar(true)} style={css.btnOutline} aria-label={t('car.editVehicle')}><Edit2 size={14} /></button>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: mob ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: mob ? 8 : 12, marginBottom: mob ? 16 : 24 }}>
-        <Stat icon={<Gauge size={15} />} label={t('car.tabKm')} value={fmtNum(car.current_km)} />
-        <Stat icon={<CheckCircle size={15} />} label={t('car.statOk')} value={stats.ok} color={theme.green} />
-        <Stat icon={<Clock size={15} />} label={t('car.statWarn')} value={stats.warn} color={theme.yellow} />
-        <Stat icon={<AlertTriangle size={15} />} label={t('car.statOverdue')} value={stats.overdue} color={theme.red} />
-      </div>
+      <LeadStrip grupos={grupos} currentKm={car.current_km} vehicleType={car.vehicle_type} mob={mob} />
 
       {/* En estrecho la ITV se queda donde estaba, antes de las
           pestañas. En ancho se va a la columna. */}
@@ -1031,91 +1346,10 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
         onChange={i => setActiveTab(detailTabs[i].id)}>
         {/* Maintenance Tab */}
         {activeTab === 'maint' && (
-          mob ? (
-            /* Mobile: card list */
-            <div>
-              {getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
-                const m = maintenance.find(x => x.type_id === mt.id)
-                return <MaintCard key={mt.id} mt={mt} record={m} currentKm={car.current_km}
-                  vehicleType={car.vehicle_type}
-                  part={parts.find(x => x.id === m?.part_id) || null}
-                  onOpenPart={setPartDetail}
-                  onEdit={() => setEditMaintType(mt.id)} onDelete={() => handleDeleteMaint(mt.id)} />
-              })}
-            </div>
-          ) : (
-            /* Desktop: table */
-            <div style={{ ...css.card, padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 20px', borderBottom: `1px solid ${theme.border}` }}>
-                <h3 style={css.h3}><Wrench size={15} style={{ marginRight: 6 }} />{t('car.tabMaint')}</h3>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                      {[t('car.element'), t('common.state'), t('car.lastKm'), t('car.lastDate'), t('car.nextKm'), t('car.nextDate'), t('common.cost'), ''].map((h, i) => <th key={i} style={css.th}>{h}</th>)}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getMaintenanceForVehicle(car.vehicle_type, car.fuel).map(mt => {
-                      const m = maintenance.find(x => x.type_id === mt.id)
-                      const status = m ? getMaintStatus(m, car.current_km) : null
-                      /* Un eje con los dos lados apuntados enseña los dos,
-                         y el que manda en blanco: es el que decide el aviso. */
-                      const porLados = hasSides(mt, car.vehicle_type) && hasSideData(m)
-                      const peor = porLados ? worstSide(m) : null
-                      const recambio = parts.find(x => x.id === m?.part_id) || null
-                      const porLado = (campo, formato) => (
-                        <div style={{ display: 'grid', gap: 2 }}>
-                          {SIDES.map(lado => (
-                            <div key={lado} style={{ display: 'flex', gap: 6, alignItems: 'baseline' }}>
-                              <span style={{ ...css.lbl, fontSize: 8, width: 24 }}>{sideShort(lado)}</span>
-                              <span style={{ ...css.num, fontSize: 12, color: lado === peor ? theme.white : theme.muted }}>
-                                {formato(m[`${campo}_${lado}`])}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                      return (
-                        <tr key={mt.id} style={{ borderBottom: `1px solid ${theme.border}`, cursor: 'pointer' }}
-                          onClick={() => setEditMaintType(mt.id)}
-                          onMouseEnter={e => e.currentTarget.style.background = theme.cardHover}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                          <td style={{ ...css.td, fontWeight: 600 }}>
-                            {mt.emoji} {maintName(mt, car.vehicle_type)}
-                            {recambio && (
-                              <div style={{ marginTop: 5 }}>
-                                <PartChip part={recambio} onClick={setPartDetail} />
-                              </div>
-                            )}
-                          </td>
-                          <td style={css.td}>{status ? <StatusBadge status={status} /> : <span style={css.lbl}>{t('common.noData')}</span>}</td>
-                          <td style={{ ...css.td, color: theme.muted }}>
-                            {porLados ? porLado('last_km', v => (v != null ? fmtNum(v) : '—'))
-                              : (m ? <span style={css.num}>{fmtNum(m.last_km)}</span> : '—')}
-                          </td>
-                          <td style={{ ...css.td, color: theme.muted }}>
-                            {porLados ? porLado('last_date', v => (v ? formatDate(v) : '—'))
-                              : formatDate(m?.last_date)}
-                          </td>
-                          <td style={{ ...css.td, ...css.num, fontWeight: 600 }}>{m && m.next_km > 0 ? fmtNum(m.next_km) : '—'}</td>
-                          <td style={{ ...css.td, color: theme.muted }}>{formatDate(m?.next_date)}</td>
-                          <td style={{ ...css.td, ...css.num, color: theme.muted }}>{m?.cost ? fmtMoney(m.cost) : '—'}</td>
-                          <td style={css.td}>
-                            <div style={{ display: 'flex', gap: 4 }}>
-                              <button onClick={e => { e.stopPropagation(); setEditMaintType(mt.id) }} style={css.btnSm(theme.accentSoft, theme.accent)}><Edit2 size={12} /></button>
-                              {m && <button onClick={e => { e.stopPropagation(); handleDeleteMaint(mt.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )
+          mob
+            ? <MaintListMobile grupos={grupos} vehicleType={car.vehicle_type} onEdit={setEditMaintType} />
+            : <MaintTable grupos={grupos} vehicleType={car.vehicle_type} parts={parts}
+                onEdit={setEditMaintType} onOpenPart={setPartDetail} />
         )}
 
         {/* Parts Tab */}
@@ -1186,6 +1420,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
           existing={maintenance.find(x => x.type_id === editMaintType) || null}
           workshops={workshops} parts={parts} vehicleType={car.vehicle_type}
           onOpenPart={setPartDetail}
+          onDelete={async () => { await handleDeleteMaint(editMaintType); setEditMaintType(null) }}
           currentKm={car.current_km} onSave={data => handleSaveMaint(editMaintType, data)} />
       )}
       <PartDetailModal open={!!partDetail} part={partDetail} onClose={() => setPartDetail(null)}

@@ -571,7 +571,7 @@ export default function Groups({ user, onToast }) {
                         display: 'block', fontWeight: 600, fontSize: 13,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>{g.name}</span>
-                      <span style={{ ...css.lbl, fontSize: 8.5 }}>
+                      <span style={{ ...css.lbl, fontSize: 10.5 }}>
                         {(memberCounts[g.id] || 0) === 1
                           ? t('grp.memberOne')
                           : t('grp.memberCount', { n: memberCounts[g.id] || 0 })}

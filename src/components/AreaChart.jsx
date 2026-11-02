@@ -203,12 +203,12 @@ export default function AreaChart({
           }}>
             {compact ? (
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-                <span style={{ ...css.lbl, fontSize: 8 }}>{sel.label}</span>
+                <span style={{ ...css.lbl, fontSize: 10 }}>{sel.label}</span>
                 <span style={{ ...css.num, fontSize: 11, color: theme.white }}>{format(sel.total)}</span>
               </div>
             ) : (
               <>
-                <div style={{ ...css.lbl, fontSize: 8 }}>{sel.label}</div>
+                <div style={{ ...css.lbl, fontSize: 10 }}>{sel.label}</div>
                 <div style={{ ...css.num, fontSize: 14, fontWeight: 600, color: theme.white, marginTop: 3 }}>
                   {format(sel.total)}
                 </div>
@@ -227,7 +227,7 @@ export default function AreaChart({
       {showLabels && (
         <div style={{
           display: 'flex', justifyContent: 'space-between',
-          padding: '7px 2px 0', ...css.lbl, fontSize: 8,
+          padding: '7px 2px 0', ...css.lbl, fontSize: 10,
         }}>
           <span>{data[0]?.label}</span>
           <span style={{ color: theme.white }}>{data[data.length - 1]?.label}</span>
@@ -255,7 +255,7 @@ function Row({ color, label, value }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
       <span style={{ width: 6, height: 6, background: color, flexShrink: 0 }} />
-      <span style={{ ...css.lbl, fontSize: 8, flex: 1 }}>{label}</span>
+      <span style={{ ...css.lbl, fontSize: 10, flex: 1 }}>{label}</span>
       <span style={{ ...css.num, fontSize: 10.5, color: theme.text }}>{value}</span>
     </div>
   )

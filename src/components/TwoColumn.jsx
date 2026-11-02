@@ -105,14 +105,14 @@ export function Panel({ title, right, children, pad = 13, onClick }) {
 export function Figure({ label, value, color, note }) {
   return (
     <div>
-      <div style={{ ...css.lbl, fontSize: 8.5 }}>{label}</div>
+      <div style={{ ...css.lbl, fontSize: 10.5 }}>{label}</div>
       <div style={{
         ...css.num, fontSize: 22, fontWeight: 600, lineHeight: 1.1,
         marginTop: 4, color: color || theme.white,
       }}>{value}</div>
       {note && (
         <div style={{
-          ...css.lbl, fontSize: 8.5, marginTop: 4,
+          ...css.lbl, fontSize: 10.5, marginTop: 4,
           textTransform: 'none', letterSpacing: '0.04em',
         }}>{note}</div>
       )}
@@ -133,7 +133,7 @@ export function Row({ label, value, color, onClick }) {
         cursor: onClick ? 'pointer' : 'default',
       }}
     >
-      <span style={{ ...css.lbl, fontSize: 9, flex: 1, minWidth: 0 }}>{label}</span>
+      <span style={{ ...css.lbl, fontSize: 11, flex: 1, minWidth: 0 }}>{label}</span>
       <span style={{ ...css.num, fontSize: 13, color: color || theme.white }}>{value}</span>
     </div>
   )
@@ -146,7 +146,7 @@ export function AttentionList({ items, empty }) {
   if (!items.length) {
     return (
       <p style={{
-        ...css.lbl, fontSize: 9.5, textTransform: 'none',
+        ...css.lbl, fontSize: 11, textTransform: 'none',
         letterSpacing: '0.04em', color: theme.muted, margin: 0,
       }}>{empty}</p>
     )
@@ -168,7 +168,7 @@ export function AttentionList({ items, empty }) {
               fontSize: 12.5, color: theme.text, fontWeight: 600,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{it.title}</div>
-            {it.sub && <div style={{ ...css.lbl, fontSize: 8.5, marginTop: 2 }}>{it.sub}</div>}
+            {it.sub && <div style={{ ...css.lbl, fontSize: 10.5, marginTop: 2 }}>{it.sub}</div>}
           </div>
           {it.value != null && (
             <span style={{ ...css.num, fontSize: 12, color: it.color || theme.muted, flexShrink: 0 }}>

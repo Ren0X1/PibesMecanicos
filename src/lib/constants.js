@@ -213,6 +213,53 @@ export function getMaintStatus(maint, currentKm) {
   return 'ok'
 }
 
+/* ─── Cuánto queda ───────────────────────────────────────────
+   Lo que la ficha enseña en vez del próximo a secas: los km que
+   faltan (o los que se ha pasado), los días, y qué parte de la vida
+   de la pieza se ha comido ya. Esa fracción es lo que ordena: no
+   mezcla km con días, así que un aceite al 94 % va antes que unas
+   escobillas al 80 % aunque unas se midan en meses y el otro en km. */
+export function maintProgress(m, currentKm) {
+  if (!m) return null
+  const hasKm = Number(m.next_km) > 0
+  const kmLeft = hasKm ? Number(m.next_km) - Number(currentKm || 0) : null
+  const hasDate = Boolean(m.next_date)
+  const daysLeft = hasDate ? Math.floor((new Date(m.next_date) - new Date()) / 86400000) : null
+
+  const usos = []
+  if (hasKm && m.last_km != null && Number(m.next_km) > Number(m.last_km)) {
+    usos.push((Number(currentKm || 0) - Number(m.last_km)) / (Number(m.next_km) - Number(m.last_km)))
+  }
+  if (hasDate && m.last_date) {
+    const desde = new Date(m.last_date), hasta = new Date(m.next_date)
+    if (hasta > desde) usos.push((Date.now() - desde) / (hasta - desde))
+  }
+  const used = usos.length ? Math.max(...usos) : null
+  return { kmLeft, daysLeft, used, fraction: used == null ? null : Math.max(0, Math.min(1, used)) }
+}
+
+const RANGO = { overdue: 0, warn: 1, ok: 2 }
+
+/* Los mantenimientos apuntados, de más a menos urgente. Primero por
+   estado. Dentro de cada estado, si los dos se miden en km, manda
+   el que menos km tiene por delante: es lo que se pregunta («¿qué
+   me toca antes?»), y un aceite a 2.890 km va antes que unas
+   pastillas a 6.190 aunque estas lleven más vida gastada. Si uno se
+   mide solo en meses no hay km que comparar, y entonces manda la
+   vida gastada. Lo que no tiene intervalo va al final de los suyos. */
+export function byUrgency(items, currentKm) {
+  const usado = x => x.progress?.used ?? -Infinity
+  return items
+    .map(it => ({ ...it, status: getMaintStatus(it.record, currentKm), progress: maintProgress(it.record, currentKm) }))
+    .sort((a, b) => {
+      const porEstado = RANGO[a.status] - RANGO[b.status]
+      if (porEstado) return porEstado
+      const ka = a.progress?.kmLeft, kb = b.progress?.kmLeft
+      if (ka != null && kb != null && ka !== kb) return ka - kb
+      return usado(b) - usado(a)
+    })
+}
+
 /* Se mantiene el nombre por compatibilidad, pero ahora respeta el
    idioma: en alemán es 07.09.2026 y en chino 2026/09/07. */
 export { fmtDate as formatDate } from './i18n.js'

@@ -169,8 +169,8 @@ export const css = {
     return {
       background: bg || theme.accent, color: color || theme.accentInk,
       border: 'none', borderRadius: 0, padding: '9px 14px',
-      fontFamily: FONT.mono, fontSize: 10, fontWeight: 500,
-      letterSpacing: '0.14em', textTransform: 'uppercase',
+      fontFamily: FONT.mono, fontSize: 11.5, fontWeight: 500,
+      letterSpacing: '0.08em', textTransform: 'uppercase',
       cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7,
       transition: 'background .15s, opacity .15s', whiteSpace: 'nowrap',
     }
@@ -179,8 +179,8 @@ export const css = {
     return {
       background: bg || theme.accent, color: color || theme.accentInk,
       border: 'none', borderRadius: 0, padding: '6px 9px',
-      fontFamily: FONT.mono, fontSize: 9, fontWeight: 500,
-      letterSpacing: '0.12em', textTransform: 'uppercase',
+      fontFamily: FONT.mono, fontSize: 10.5, fontWeight: 500,
+      letterSpacing: '0.06em', textTransform: 'uppercase',
       cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5,
       whiteSpace: 'nowrap',
     }
@@ -189,8 +189,8 @@ export const css = {
     return {
       background: 'transparent', color: theme.muted,
       border: `1px solid ${theme.border}`, borderRadius: 0, padding: '9px 14px',
-      fontFamily: FONT.mono, fontSize: 10, fontWeight: 500,
-      letterSpacing: '0.14em', textTransform: 'uppercase',
+      fontFamily: FONT.mono, fontSize: 11.5, fontWeight: 500,
+      letterSpacing: '0.08em', textTransform: 'uppercase',
       cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 7,
       whiteSpace: 'nowrap',
     }
@@ -213,11 +213,13 @@ export const css = {
     }
   },
 
-  /* La versalita monoespaciada: cose todo el sistema. */
+  /* La versalita monoespaciada: cose todo el sistema. Iba a 9 px,
+     con mucho aire y en el gris más flojo, y al sol no se leía. A
+     11 px y con la mitad de espaciado ocupa casi lo mismo. */
   get lbl() {
     return {
-      fontFamily: FONT.mono, fontSize: 9, fontWeight: 500,
-      letterSpacing: '0.2em', textTransform: 'uppercase', color: theme.mutedLight,
+      fontFamily: FONT.mono, fontSize: 11, fontWeight: 500,
+      letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.muted,
     }
   },
   get label() { return { ...css.lbl, display: 'block', marginBottom: 6, color: theme.muted } },
@@ -233,8 +235,8 @@ export const css = {
     return {
       background: bg, color, border: `1px solid ${color}40`,
       padding: '3px 7px', borderRadius: 0,
-      fontFamily: FONT.mono, fontSize: 8.5, fontWeight: 500,
-      letterSpacing: '0.13em', textTransform: 'uppercase',
+      fontFamily: FONT.mono, fontSize: 10.5, fontWeight: 500,
+      letterSpacing: '0.06em', textTransform: 'uppercase',
       display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
     }
   },
@@ -253,6 +255,6 @@ export const css = {
   get overlay() { return { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.72)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 } },
   get modal() { return { background: theme.card, borderRadius: 0, border: `1px solid ${theme.rule}`, padding: 22, width: '100%', maxWidth: 540, maxHeight: '86vh', overflowY: 'auto' } },
 
-  get th() { return { ...css.lbl, letterSpacing: '0.17em', padding: '10px 9px 8px', textAlign: 'left', borderBottom: `1px solid ${theme.rule}` } },
+  get th() { return { ...css.lbl, letterSpacing: '0.08em', padding: '10px 9px 8px', textAlign: 'left', borderBottom: `1px solid ${theme.rule}` } },
   get td() { return { padding: '10px 9px', borderBottom: `1px solid ${theme.border}`, fontSize: 13 } },
 }

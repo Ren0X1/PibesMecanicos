@@ -193,7 +193,7 @@ export function Stat({ icon, label, value, sub, color }) {
         ...css.num, fontSize: 20, fontWeight: 600, marginTop: 6,
         color: color || theme.white, lineHeight: 1,
       }}>{value}</div>
-      {sub && <div style={{ ...css.lbl, fontSize: 8.5, letterSpacing: '0.05em', marginTop: 5, textTransform: 'none' }}>{sub}</div>}
+      {sub && <div style={{ ...css.lbl, fontSize: 10.5, letterSpacing: '0.05em', marginTop: 5, textTransform: 'none' }}>{sub}</div>}
     </div>
   )
 }

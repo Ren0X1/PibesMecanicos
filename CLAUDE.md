@@ -39,12 +39,13 @@ Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -ge 5170 -and $
 src/
   lib/
     theme.js        el sistema de diseño entero (colores, tipos, css)
-    strings.js      598 claves × 6 idiomas
+    strings.js      683 claves × 6 idiomas
     i18n.js         t(), fmtNum, fmtMoney, fmtDate, fmtMonth
     api.js          FACHADA: decide entre Supabase y la demo
     supabase.js     la de verdad
     demo/           la de mentira (seed, store, modo)
     constants.js    tipos de mantenimiento, combustibles, estados
+    maintIcons.jsx  el icono de línea de cada mantenimiento
     useTouch.js     useIsTouch / useCanSwipe / useMediaQuery
     prefs.js        idioma, tema y acento del perfil
     snooze.js       ocultar un aviso diez días
@@ -124,6 +125,22 @@ doce; no queda ninguno.
 
 `AreaChart.jsx`. Se quitó `recharts` del proyecto entero (el
 paquete bajó 395 kB). Si necesitas enseñar una serie, es esa.
+Un reparto no es una serie: va en una barra partida hecha con
+`div` (STYLE.md, punto 6).
+
+### 5 bis. La ficha se ordena por lo que toca
+
+La lista de mantenimientos no sigue el orden de `MAINT_TYPES`: va
+en grupos —vencido, próximo, al día— y lo que nunca se ha apuntado
+se recoge al final en fichas de «+». Dentro de cada grupo lo ordena
+`byUrgency()`: si las dos piezas se miden en km, va antes la que
+menos km tiene por delante; si una se mide solo en meses, manda la
+vida gastada (`maintProgress()`). Arriba, «Lo que toca» es la
+primera de esa lista, y las que van a la par (aceite y filtro) se
+dicen juntas. Lo vigila `test/urgencia.test.jsx`.
+
+La papelera ya no está en cada fila: está dentro del formulario, y
+pregunta con `useConfirm()`.
 
 ### 6. Las piezas que van por eje
 
@@ -221,7 +238,7 @@ solo aparecía al pintar el componente.
 
 De ahí salieron las dos herramientas que hay:
 
-**Los tests** (`npm test`, 175). Montan cada pantalla de verdad,
+**Los tests** (`npm test`, 186). Montan cada pantalla de verdad,
 en los seis idiomas, en los dos temas y —en `wide.test.jsx`— con
 `matchMedia` diciendo que sí, que es la única forma de probar la
 mitad ancha del código.

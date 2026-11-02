@@ -46,7 +46,7 @@ export default function DemoBanner({ onReset }) {
     cursor: 'pointer', flexShrink: 0,
     display: 'inline-flex', alignItems: 'center', gap: 6,
     padding: '4px 9px', minHeight: 26,
-    fontFamily: FONT.mono, fontSize: 8.5, fontWeight: 600,
+    fontFamily: FONT.mono, fontSize: 10.5, fontWeight: 600,
     letterSpacing: '0.14em', textTransform: 'uppercase',
     whiteSpace: 'nowrap',
   }
@@ -64,7 +64,7 @@ export default function DemoBanner({ onReset }) {
         <FlaskConical size={13} strokeWidth={2.2} style={{ flexShrink: 0 }} />
 
         <span style={{
-          fontFamily: FONT.mono, fontSize: 9, fontWeight: 600,
+          fontFamily: FONT.mono, fontSize: 11, fontWeight: 600,
           letterSpacing: '0.16em', textTransform: 'uppercase',
           flex: 1, minWidth: 0,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',

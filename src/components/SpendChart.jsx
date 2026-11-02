@@ -87,7 +87,7 @@ export default function SpendChart({ maintenance, fuelLogs, jobs, height = 60 })
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '13px 14px 0' }}>
-        <div style={{ ...css.lbl, fontSize: 8.5 }}>{t('chart.thisMonth')}</div>
+        <div style={{ ...css.lbl, fontSize: 10.5 }}>{t('chart.thisMonth')}</div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 6, flexWrap: 'wrap' }}>
           <span style={{ ...css.num, fontSize: 27, fontWeight: 600, color: theme.white, lineHeight: 1 }}>
@@ -100,7 +100,7 @@ export default function SpendChart({ maintenance, fuelLogs, jobs, height = 60 })
           )}
         </div>
 
-        <div style={{ ...css.lbl, fontSize: 8.5, marginTop: 6, textTransform: 'none', letterSpacing: '0.04em' }}>
+        <div style={{ ...css.lbl, fontSize: 10.5, marginTop: 6, textTransform: 'none', letterSpacing: '0.04em' }}>
           {delta != null
             ? t('chart.vsPrev', { prev: fmtMoney(prev), avg: fmtMoney(avg) })
             : `${t('chart.average')} ${fmtMoney(avg)}`}
@@ -119,7 +119,7 @@ export default function SpendChart({ maintenance, fuelLogs, jobs, height = 60 })
 
       <div style={{
         display: 'flex', justifyContent: 'space-between',
-        padding: '8px 14px 12px', ...css.lbl, fontSize: 8,
+        padding: '8px 14px 12px', ...css.lbl, fontSize: 10,
       }}>
         <span>{fmtMonth(months[0].date)}</span>
         <span style={{ color: theme.white }}>{fmtMonth(months[months.length - 1].date)}</span>

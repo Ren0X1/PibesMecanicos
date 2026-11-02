@@ -558,7 +558,7 @@ export default function AdminPanel({ user, onToast, onMaintenanceChange, initial
                       leyenda se queda en nombre y cuenta. */}
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
                     {stats.vehicleTypes.map(v => (
-                      <span key={v.name} style={{ ...css.lbl, fontSize: 9 }}>
+                      <span key={v.name} style={{ ...css.lbl, fontSize: 11 }}>
                         {v.name} <span style={{ ...css.num, color: theme.white }}>{fmtNum(v.value)}</span>
                       </span>
                     ))}
@@ -586,7 +586,7 @@ export default function AdminPanel({ user, onToast, onMaintenanceChange, initial
                       debajo de un gráfico se lee como su leyenda. */}
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 18, marginTop: 10 }}>
                     {[{ l: t('status.ok'), c: theme.green, v: stats.ok }, { l: t('adm.upcomingShort'), c: theme.yellow, v: stats.warn }, { l: t('adm.overdueShort'), c: theme.red, v: stats.overdue }].map(x => (
-                      <span key={x.l} style={{ ...css.lbl, fontSize: 9 }}>
+                      <span key={x.l} style={{ ...css.lbl, fontSize: 11 }}>
                         {x.l} <span style={{ ...css.num, fontSize: 12, color: x.c }}>{fmtNum(x.v)}</span>
                       </span>
                     ))}

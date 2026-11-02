@@ -101,7 +101,7 @@ function Rail({ cars, meta, selectedId, onSelect, onAdd, width }) {
                 <span style={{ ...css.h3, fontSize: 12.5, display: 'block' }}>
                   {car.brand} {car.model}
                 </span>
-                <span style={{ ...css.lbl, fontSize: 8, display: 'block', marginTop: 4 }}>
+                <span style={{ ...css.lbl, fontSize: 10, display: 'block', marginTop: 4 }}>
                   {fmtNum(car.current_km)} {t('common.km')} · {car.plate}
                 </span>
               </span>
@@ -231,7 +231,7 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
             {parts.slice(0, rows).map(p => (
               <div key={p.id} style={rowStyle()}>
                 <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12.5, fontWeight: 600, color: theme.white }}>{p.name}</span>
-                <span style={{ ...css.lbl, ...css.num, fontSize: 9.5 }}>{p.reference || '—'}</span>
+                <span style={{ ...css.lbl, ...css.num, fontSize: 11 }}>{p.reference || '—'}</span>
               </div>
             ))}
           </div>
@@ -246,7 +246,7 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
           <div>
             {fuelLogs.slice(0, rows).map(f => (
               <div key={f.id} style={rowStyle()}>
-                <span style={{ ...css.lbl, fontSize: 9.5, minWidth: 74 }}>{formatDate(f.date)}</span>
+                <span style={{ ...css.lbl, fontSize: 11, minWidth: 74 }}>{formatDate(f.date)}</span>
                 <span style={{ flex: 1, ...css.num, fontSize: 11.5, color: theme.text }}>
                   {fmtNum(f.liters, 2)} L
                 </span>
@@ -264,7 +264,7 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
         <div>
           {kmLogs.slice(0, rows).map(k => (
             <div key={k.id} style={rowStyle()}>
-              <span style={{ ...css.lbl, fontSize: 9.5, minWidth: 74 }}>{formatDate(k.date)}</span>
+              <span style={{ ...css.lbl, fontSize: 11, minWidth: 74 }}>{formatDate(k.date)}</span>
               <span style={{ flex: 1, ...css.num, fontSize: 11.5, color: theme.white }}>
                 {fmtNum(k.km)} {t('common.km')}
               </span>
@@ -336,13 +336,13 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
                     background: on ? theme.card : 'transparent', border: 'none',
                     borderBottom: `2px solid ${on ? theme.accent : 'transparent'}`,
                     color: on ? theme.accent : theme.mutedLight, cursor: 'pointer',
-                    fontFamily: FONT.mono, fontSize: 9, fontWeight: 500,
+                    fontFamily: FONT.mono, fontSize: 11, fontWeight: 500,
                     letterSpacing: '0.13em', textTransform: 'uppercase', whiteSpace: 'nowrap',
                   }}>
                     <Icon size={13} /> {x.label}
                     {x.badge != null && (
                       <span style={{
-                        background: theme.red, color: theme.accentInk, fontSize: 8,
+                        background: theme.red, color: theme.accentInk, fontSize: 10,
                         padding: '0 4px', minWidth: 14, textAlign: 'center',
                       }}>{x.badge}</span>
                     )}
@@ -381,7 +381,7 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
                   <div style={{ ...css.num, fontSize: 15, color: theme.white }}>
                     {formatDate(latestItv.expiry_date) || '—'}
                   </div>
-                  <div style={{ ...css.lbl, fontSize: 8, marginTop: 5 }}>
+                  <div style={{ ...css.lbl, fontSize: 10, marginTop: 5 }}>
                     {t(`itv.${latestItv.result === 'favorable' ? 'favorable' : latestItv.result === 'negativa' ? 'negative' : 'unfavorable'}`)}
                     {latestItv.station ? ` · ${latestItv.station}` : ''}
                   </div>
