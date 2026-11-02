@@ -34,6 +34,10 @@ export const MAINT_TYPES = [
   { id: 'aceite', get name() { return t('maint.aceite') }, emoji: '🛢️', defKm: 10000, defMonths: 12, for: ['coche', 'moto'] },
   { id: 'filtro_aceite', get name() { return t('maint.filtro_aceite') }, emoji: '🔧', defKm: 10000, defMonths: 12, for: ['coche', 'moto'] },
   { id: 'filtro_aire', get name() { return t('maint.filtro_aire') }, emoji: '💨', defKm: 20000, defMonths: 24, for: ['coche', 'moto'] },
+  /* Un eléctrico no tiene combustible que filtrar. En moto el filtro
+     suele ir dentro de la bomba, en el depósito, y se cambia menos
+     que en un coche diésel; de ahí el intervalo propio. */
+  { id: 'filtro_combustible', get name() { return t('maint.filtro_combustible') }, emoji: '⛽', defKm: 40000, defKmMoto: 30000, defMonths: 48, for: ['coche', 'moto'], excludeFuel: ['Eléctrico'] },
 
   // ── Por eje: frenos ──
   { id: 'pastillas_del', get name() { return t('maint.pastillas_del') }, emoji: '🛑', defKm: 40000, defKmMoto: 20000, defMonths: 48, for: ['coche', 'moto'], axle: 'del', sides: true },

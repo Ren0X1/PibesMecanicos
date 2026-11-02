@@ -438,6 +438,7 @@ export const STRINGS = {
   'maint.aceite':            { en: 'Engine oil', es: 'Aceite motor', zh: '机油', de: 'Motoröl', fr: 'Huile moteur', ru: 'Моторное масло' },
   'maint.filtro_aceite':     { en: 'Oil filter', es: 'Filtro de aceite', zh: '机油滤清器', de: 'Ölfilter', fr: 'Filtre à huile', ru: 'Масляный фильтр' },
   'maint.filtro_aire':       { en: 'Air filter', es: 'Filtro de aire', zh: '空气滤清器', de: 'Luftfilter', fr: 'Filtre à air', ru: 'Воздушный фильтр' },
+  'maint.filtro_combustible': { en: 'Fuel filter', es: 'Filtro de combustible', zh: '燃油滤清器', de: 'Kraftstofffilter', fr: 'Filtre à carburant', ru: 'Топливный фильтр' },
   'maint.pastillas_del':     { en: 'Front brake pads', es: 'Pastillas freno del.', zh: '前刹车片', de: 'Bremsbeläge vorn', fr: 'Plaquettes avant', ru: 'Передние колодки' },
   'maint.pastillas_tras':    { en: 'Rear brake pads', es: 'Pastillas freno tras.', zh: '后刹车片', de: 'Bremsbeläge hinten', fr: 'Plaquettes arrière', ru: 'Задние колодки' },
   'maint.discos_del':        { en: 'Front brake discs', es: 'Discos freno del.', zh: '前刹车盘', de: 'Bremsscheiben vorn', fr: 'Disques avant', ru: 'Передние тормозные диски' },
