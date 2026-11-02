@@ -220,6 +220,21 @@ export async function createCarPart(part) {
   return data
 }
 
+/* Cambiar el nombre, la referencia o el enlace de un recambio. Los
+   mantenimientos y trabajos que lo tienen enlazado lo siguen
+   teniendo: van por id, no por nombre. */
+export async function updateCarPart(id, updates) {
+  const { name, reference, url } = updates
+  const { data, error } = await supabase
+    .from('car_parts')
+    .update({ name, reference: reference ?? '', url: url ?? '' })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
 export async function deleteCarPart(id) {
   const { error } = await supabase.from('car_parts').delete().eq('id', id)
   if (error) throw error

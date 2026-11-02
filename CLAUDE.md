@@ -39,7 +39,7 @@ Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -ge 5170 -and $
 src/
   lib/
     theme.js        el sistema de diseño entero (colores, tipos, css)
-    strings.js      682 claves × 6 idiomas
+    strings.js      685 claves × 6 idiomas
     i18n.js         t(), fmtNum, fmtMoney, fmtDate, fmtMonth
     api.js          FACHADA: decide entre Supabase y la demo
     supabase.js     la de verdad
@@ -132,8 +132,9 @@ Un reparto no es una serie: va en una barra partida hecha con
 
 La lista de mantenimientos no sigue el orden de `MAINT_TYPES`: va
 en grupos —vencido, próximo, al día— y lo que nunca se ha apuntado
-va al final, una fila debajo de otra con «Sin datos» (se probó a
-recogerlo en fichas de «+» y con veinte vacías no se leía). Dentro de cada grupo lo ordena
+va al final, plegado bajo «Sin apuntar»; al abrirlo, una fila
+debajo de otra con «Sin datos» (se probó a recogerlo en fichas de
+«+» y con veinte vacías no se leía). Dentro de cada grupo lo ordena
 `byUrgency()`: si las dos piezas se miden en km, va antes la que
 menos km tiene por delante; si una se mide solo en meses, manda la
 vida gastada (`maintProgress()`). Arriba, «Lo que toca» es la
@@ -142,6 +143,11 @@ dicen juntas. Lo vigila `test/urgencia.test.jsx`.
 
 La papelera ya no está en cada fila: está dentro del formulario, y
 pregunta con `useConfirm()`.
+
+Los recambios se pueden editar (`updateCarPart`): nombre, referencia
+y enlace, desde el lápiz de la fila o desde su ficha. Los
+mantenimientos y trabajos los enlazan por id, así que cambiarles el
+nombre no rompe nada. Lo vigila `test/recambios.test.jsx`.
 
 ### 6. Las piezas que van por eje
 
@@ -239,7 +245,7 @@ solo aparecía al pintar el componente.
 
 De ahí salieron las dos herramientas que hay:
 
-**Los tests** (`npm test`, 186). Montan cada pantalla de verdad,
+**Los tests** (`npm test`, 188). Montan cada pantalla de verdad,
 en los seis idiomas, en los dos temas y —en `wide.test.jsx`— con
 `matchMedia` diciendo que sí, que es la única forma de probar la
 mitad ancha del código.

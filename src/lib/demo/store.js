@@ -249,6 +249,14 @@ export async function createCarPart(part) {
   return ok(row)
 }
 
+export async function updateCarPart(id, updates) {
+  const row = db.car_parts.find(r => r.id === id)
+  if (!row) throw new Error(t('err.partNotFound'))
+  const { name, reference, url } = updates
+  Object.assign(row, { name, reference: reference ?? '', url: url ?? '' }); persist()
+  return ok(row)
+}
+
 export async function deleteCarPart(id) {
   remove('car_parts', r => r.id === id)
   /* Igual que el ON DELETE SET NULL de la base real: el recambio se

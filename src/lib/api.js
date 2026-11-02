@@ -40,6 +40,7 @@ export const upsertMaintenanceRecord = (...a) => impl().upsertMaintenanceRecord(
 export const deleteMaintenanceRecord = (...a) => impl().deleteMaintenanceRecord(...a)
 export const getCarParts = (...a) => impl().getCarParts(...a)
 export const createCarPart = (...a) => impl().createCarPart(...a)
+export const updateCarPart = (...a) => impl().updateCarPart(...a)
 export const deleteCarPart = (...a) => impl().deleteCarPart(...a)
 export const getMaintenanceMode = (...a) => impl().getMaintenanceMode(...a)
 export const setMaintenanceMode = (...a) => impl().setMaintenanceMode(...a)

@@ -10,7 +10,7 @@ import { useIsMobile } from '../lib/useIsMobile.js'
 import {
   updateCar, getMaintenanceRecords, upsertMaintenanceRecord,
   deleteMaintenanceRecord, getKmLogs, createKmLog, deleteKmLog,
-  getCarParts, createCarPart, deleteCarPart, getFuelLogs, getItvRecords, getVehicleTodos, getWorkshops,
+  getCarParts, createCarPart, updateCarPart, deleteCarPart, getFuelLogs, getItvRecords, getVehicleTodos, getWorkshops,
   getCustomJobs, createCustomJob, updateCustomJob, deleteCustomJob
 } from '../lib/api.js'
 import {
@@ -242,14 +242,16 @@ function GrupoTitulo({ label, n, color, extra, mob }) {
   )
 }
 
-/* Las piezas que nunca se han apuntado van al final, una debajo de
-   otra, como filas normales con «Sin datos»: un toque y se apunta.
-   Se probó a recogerlas en un bloque de fichas de «+», y con veinte
-   piezas vacías era una nube de botones que no se leía. */
+/* Las piezas que nunca se han apuntado van al final, plegadas bajo
+   «Sin apuntar». Al abrirlas salen una debajo de otra, como filas
+   normales con «Sin datos»: un toque y se apunta. Se probó a
+   recogerlas en un bloque de fichas de «+», y con veinte piezas
+   vacías era una nube de botones que no se leía. */
 const SIN_DATOS = () => <span style={{ ...css.lbl }}>{t('common.noData')}</span>
 
 /* ── Escritorio: una tabla, con los grupos como filas de título ── */
 function MaintTable({ grupos, vehicleType, parts, onEdit, onOpenPart }) {
+  const [vaciasAbiertas, setVaciasAbiertas] = useState(false)
   const total = grupos.overdue.length + grupos.warn.length + grupos.ok.length + grupos.empty.length
   const lapiz = (fila, o) => { const l = fila.querySelector('[data-lapiz]'); if (l) l.style.opacity = o }
   const fila = ({ mt, record, status, progress }) => {
@@ -312,24 +314,22 @@ function MaintTable({ grupos, vehicleType, parts, onEdit, onOpenPart }) {
       </tr>
     )
   }
-  /* La primera vacía lleva el filete fuerte encima: separa lo que
-     tiene datos de lo que no, sin otro título. */
-  const filaVacia = (mt, i) => (
+  const filaVacia = (mt) => (
     <tr key={mt.id} style={{ cursor: 'pointer' }}
       onClick={() => onEdit(mt.id)}
       onMouseEnter={e => { e.currentTarget.style.background = theme.cardHover; lapiz(e.currentTarget, 1) }}
       onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; lapiz(e.currentTarget, 0.35) }}>
-      <td style={{ ...css.td, paddingLeft: 20, fontWeight: 600, color: theme.text, ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}) }}>
+      <td style={{ ...css.td, paddingLeft: 20, fontWeight: 600, color: theme.text }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
           <MaintIcon id={mt.id} color={theme.mutedLight} />
           {maintName(mt, vehicleType)}
         </span>
       </td>
-      <td style={{ ...css.td, textAlign: 'right', ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}) }}>{SIN_DATOS()}</td>
+      <td style={{ ...css.td, textAlign: 'right' }}>{SIN_DATOS()}</td>
       {[0, 1, 2].map(k => (
-        <td key={k} style={{ ...css.td, textAlign: 'right', color: theme.mutedLight, ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}) }}>—</td>
+        <td key={k} style={{ ...css.td, textAlign: 'right', color: theme.mutedLight }}>—</td>
       ))}
-      <td style={{ ...css.td, width: 40, textAlign: 'center', ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}) }}>
+      <td style={{ ...css.td, width: 40, textAlign: 'center' }}>
         <span data-lapiz style={{ opacity: 0.35, color: theme.muted, transition: 'opacity .15s', display: 'inline-flex' }}
           aria-label={t('common.edit')}>
           <Edit2 size={14} />
@@ -362,7 +362,26 @@ function MaintTable({ grupos, vehicleType, parts, onEdit, onOpenPart }) {
             {GRUPOS.flatMap(g => grupos[g.id].length
               ? [titulo(g, grupos[g.id].length), ...grupos[g.id].map(fila)]
               : [])}
-            {grupos.empty.map(filaVacia)}
+            {grupos.empty.length > 0 && (
+              <tr key="g-empty">
+                <td colSpan={6} style={{ padding: 0, borderTop: `1px solid ${theme.rule}` }}>
+                  <button type="button" onClick={() => setVaciasAbiertas(a => !a)} aria-expanded={vaciasAbiertas}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+                      padding: '14px 20px', background: 'transparent', border: 'none', cursor: 'pointer',
+                      fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, color: theme.white, textAlign: 'left',
+                    }}>
+                    <span style={{ width: 8, height: 8, background: theme.rule, flexShrink: 0 }} />
+                    {t('maint.notLogged')}
+                    <span style={{ ...css.num, color: theme.muted, fontWeight: 500 }}>{grupos.empty.length}</span>
+                    <ChevronDown size={16} color={theme.muted} style={{
+                      marginLeft: 'auto', transform: vaciasAbiertas ? 'rotate(180deg)' : 'none', transition: 'transform .15s',
+                    }} />
+                  </button>
+                </td>
+              </tr>
+            )}
+            {vaciasAbiertas && grupos.empty.map(filaVacia)}
           </tbody>
         </table>
       </div>
@@ -376,7 +395,7 @@ function MaintListMobile({ grupos, vehicleType, onEdit }) {
   /* Si no hay nada vencido ni próximo, lo que está al día arranca
      abierto: una pantalla con dos grupos plegados no dice nada. */
   const nadaUrgente = !grupos.overdue.length && !grupos.warn.length
-  const [abiertos, setAbiertos] = useState({ ok: nadaUrgente })
+  const [abiertos, setAbiertos] = useState({ ok: nadaUrgente, empty: false })
   const alternar = id => setAbiertos(a => ({ ...a, [id]: !a[id] }))
 
   const fila = ({ mt, record, status, progress }) => {
@@ -404,12 +423,11 @@ function MaintListMobile({ grupos, vehicleType, onEdit }) {
     )
   }
 
-  const filaVacia = (mt, i) => (
+  const filaVacia = (mt) => (
     <button key={mt.id} type="button" onClick={() => onEdit(mt.id)} style={{
       display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 52,
       padding: '10px 16px 10px 15px', background: 'transparent', border: 'none',
       borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left',
-      ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}),
       fontFamily: 'inherit', color: theme.text,
     }}>
       <MaintIcon id={mt.id} color={theme.mutedLight} size={16} />
@@ -447,7 +465,8 @@ function MaintListMobile({ grupos, vehicleType, onEdit }) {
         )
       })}
       {grupos.ok.length > 0 && plegable('ok', t('car.statOk'), theme.green, grupos.ok.length, grupos.ok.map(fila))}
-      {grupos.empty.map(filaVacia)}
+      {grupos.empty.length > 0 && plegable('empty', t('maint.notLogged'), theme.rule, grupos.empty.length,
+        grupos.empty.map(filaVacia))}
     </div>
   )
 }
@@ -817,17 +836,23 @@ function CarEditModal({ open, onClose, onSave, car }) {
   )
 }
 
-function PartFormModal({ open, onClose, onSave }) {
-  const [form, setForm] = useState({ name: '', reference: '', url: '' })
+/* El mismo formulario crea y edita: con `initial` arranca con los
+   datos del recambio. Cambiar el nombre o el enlace no rompe nada,
+   porque los mantenimientos y trabajos lo enlazan por id. */
+export function PartFormModal({ open, onClose, onSave, initial = null }) {
+  const vacio = { name: '', reference: '', url: '' }
+  const [form, setForm] = useState(initial
+    ? { name: initial.name || '', reference: initial.reference || '', url: initial.url || '' }
+    : vacio)
   const [saving, setSaving] = useState(false)
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const handleSave = async () => {
-    if (!form.name) return
+    if (!form.name.trim()) return
     setSaving(true)
-    try { await onSave(form); setForm({ name: '', reference: '', url: '' }) } finally { setSaving(false) }
+    try { await onSave(form); if (!initial) setForm(vacio) } finally { setSaving(false) }
   }
   return (
-    <Modal open={open} onClose={onClose} title={t('car.addPartTitle')}>
+    <Modal open={open} onClose={onClose} title={initial ? t('part.editTitle') : t('car.addPartTitle')}>
       <Field label={t('common.name')}><input style={css.input} value={form.name} onChange={e => set('name', e.target.value)} placeholder={t('car.partNamePh')} /></Field>
       <Field label={t('common.reference')}><input style={{ ...css.input, ...css.num }} value={form.reference} onChange={e => set('reference', e.target.value)} placeholder={t('car.partRefPh')} /></Field>
       <Field label={t('car.linkOptional')}><input style={css.input} value={form.url} onChange={e => set('url', e.target.value)} placeholder="https://..." /></Field>
@@ -853,7 +878,7 @@ function usoDe(partId, maintenance = [], jobs = [], vehicleType) {
 }
 
 /* ── Ficha de un recambio ── */
-function PartDetailModal({ open, onClose, part, usos = [] }) {
+function PartDetailModal({ open, onClose, part, usos = [], onEdit }) {
   if (!part) return null
   return (
     <Modal open={open} onClose={onClose} title={t('part.detail')}>
@@ -891,7 +916,10 @@ function PartDetailModal({ open, onClose, part, usos = [] }) {
         )}
       </div>
 
-      <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16 }}>
+      <div style={{ ...css.flex, justifyContent: 'flex-end', marginTop: 16, gap: 8 }}>
+        {onEdit && (
+          <button onClick={() => onEdit(part)} style={css.btnOutline}><Edit2 size={13} /> {t('common.edit')}</button>
+        )}
         <button onClick={onClose} style={css.btnOutline}>{t('common.close')}</button>
       </div>
     </Modal>
@@ -1078,7 +1106,7 @@ function JobsTab({ jobs, workshops, parts, carKm, isMobile, onSave, onDelete, on
 }
 
 /* ── Parts Tab ── */
-function PartsTab({ carId, parts, maintenance = [], jobs = [], vehicleType, onAdd, onDelete, onOpenPart, isMobile }) {
+function PartsTab({ carId, parts, maintenance = [], jobs = [], vehicleType, onAdd, onEdit, onDelete, onOpenPart, isMobile }) {
   const [showAdd, setShowAdd] = useState(false)
   const blue = theme.accent, blueSoft = theme.accentSoft
   return (
@@ -1114,7 +1142,10 @@ function PartsTab({ carId, parts, maintenance = [], jobs = [], vehicleType, onAd
                       </div>
                     )}
                   </div>
-                  <button onClick={e => { e.stopPropagation(); onDelete(p.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button onClick={e => { e.stopPropagation(); onEdit(p) }} style={css.btnSm(theme.accentSoft, theme.accent)} aria-label={t('part.editTitle')}><Edit2 size={12} /></button>
+                    <button onClick={e => { e.stopPropagation(); onDelete(p.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                  </div>
                 </div>
               )
             })}
@@ -1124,7 +1155,7 @@ function PartsTab({ carId, parts, maintenance = [], jobs = [], vehicleType, onAd
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${theme.border}` }}>
-                <th style={css.th}>{t('common.name')}</th><th style={css.th}>{t('common.reference')}</th><th style={css.th}>{t('part.usedIn')}</th><th style={css.th}>{t('common.link')}</th><th style={{ ...css.th, width: 60 }}></th>
+                <th style={css.th}>{t('common.name')}</th><th style={css.th}>{t('common.reference')}</th><th style={css.th}>{t('part.usedIn')}</th><th style={css.th}>{t('common.link')}</th><th style={{ ...css.th, width: 84 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -1139,7 +1170,12 @@ function PartsTab({ carId, parts, maintenance = [], jobs = [], vehicleType, onAd
                     <td style={css.td}>{p.reference ? <span style={css.badge(blueSoft, blue)}>{p.reference}</span> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>—</span>}</td>
                     <td style={{ ...css.td, color: theme.muted, fontSize: 12 }}>{usos.length ? usos.join(' · ') : '—'}</td>
                     <td style={css.td}>{p.url ? <a href={p.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: blue, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12 }}><ExternalLink size={12} /> {t('common.openLink')}</a> : <span style={{ color: theme.mutedLight, fontSize: 12 }}>—</span>}</td>
-                    <td style={css.td}><button onClick={e => { e.stopPropagation(); onDelete(p.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button></td>
+                    <td style={css.td}>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button onClick={e => { e.stopPropagation(); onEdit(p) }} style={css.btnSm(theme.accentSoft, theme.accent)} aria-label={t('part.editTitle')}><Edit2 size={12} /></button>
+                        <button onClick={e => { e.stopPropagation(); onDelete(p.id) }} style={css.btnSm(theme.redSoft, theme.red)}><Trash2 size={12} /></button>
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
@@ -1166,6 +1202,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   const [jobs, setJobs] = useState([])
   const [workshops, setWorkshops] = useState([])
   const [partDetail, setPartDetail] = useState(null)
+  const [partEdit, setPartEdit] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showKmModal, setShowKmModal] = useState(false)
   const [editMaintType, setEditMaintType] = useState(null)
@@ -1230,6 +1267,10 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
   }
   const handleAddPart = async (form) => {
     try { await createCarPart({ car_id: car.id, ...form }); onToast(t('car.partAdded')); loadData() }
+    catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
+  }
+  const handleUpdatePart = async (id, form) => {
+    try { await updateCarPart(id, form); setPartEdit(null); onToast(t('part.updated')); loadData() }
     catch (err) { onToast(t('common.error') + ': ' + err.message, 'error') }
   }
   const handleDeletePart = async (id) => {
@@ -1450,7 +1491,7 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
         {activeTab === 'todos' && <TodoTab carId={car.id} todos={todos} onReload={loadData} onToast={onToast} isMobile={mob} />}
 
         {activeTab === 'parts' && <PartsTab carId={car.id} parts={parts} maintenance={maintenance} jobs={jobs}
-          vehicleType={car.vehicle_type} onAdd={handleAddPart} onDelete={handleDeletePart}
+          vehicleType={car.vehicle_type} onAdd={handleAddPart} onEdit={setPartEdit} onDelete={handleDeletePart}
           onOpenPart={setPartDetail} isMobile={mob} />}
 
         {activeTab === 'jobs' && <JobsTab jobs={jobs} workshops={workshops} parts={parts}
@@ -1518,7 +1559,13 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
           currentKm={car.current_km} onSave={data => handleSaveMaint(editMaintType, data)} />
       )}
       <PartDetailModal open={!!partDetail} part={partDetail} onClose={() => setPartDetail(null)}
+        onEdit={p => { setPartDetail(null); setPartEdit(p) }}
         usos={partDetail ? usoDe(partDetail.id, maintenance, jobs, car.vehicle_type) : []} />
+      {partEdit && (
+        <PartFormModal key={partEdit.id} open initial={partEdit}
+          onClose={() => setPartEdit(null)}
+          onSave={form => handleUpdatePart(partEdit.id, form)} />
+      )}
       <CarEditModal open={showEditCar} onClose={() => setShowEditCar(false)} car={car} onSave={handleEditCar} />
     </div>
   )

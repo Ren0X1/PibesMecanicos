@@ -182,6 +182,7 @@ export const STRINGS = {
   'car.every':        { en: 'Every {km} km', es: 'Cada {km} km', zh: '每 {km} 公里', de: 'Alle {km} km', fr: 'Tous les {km} km', ru: 'Каждые {km} км' },
   'car.addPart':      { en: 'Add part', es: 'Añadir recambio', zh: '添加配件', de: 'Ersatzteil hinzufügen', fr: 'Ajouter une pièce', ru: 'Добавить запчасть' },
   'car.partAdded':    { en: 'Part added', es: 'Recambio añadido', zh: '配件已添加', de: 'Ersatzteil hinzugefügt', fr: 'Pièce ajoutée', ru: 'Запчасть добавлена' },
+  'part.updated':    { en: 'Part updated', es: 'Recambio actualizado', zh: '配件已更新', de: 'Ersatzteil aktualisiert', fr: 'Pièce modifiée', ru: 'Запчасть обновлена' },
   'car.noParts':      { en: 'No parts yet', es: 'Sin recambios', zh: '暂无配件', de: 'Keine Ersatzteile', fr: 'Aucune pièce', ru: 'Запчастей нет' },
 
   // ══════════════════════════ RESUMEN ══════════════════════════
@@ -510,6 +511,7 @@ export const STRINGS = {
   'car.logKmTitle':    { en: 'Log kilometres', es: 'Registrar kilómetros', zh: '记录里程', de: 'Kilometer eintragen', fr: 'Saisir le kilométrage', ru: 'Записать пробег' },
   'car.editVehicle':   { en: 'Edit vehicle', es: 'Editar vehículo', zh: '编辑车辆', de: 'Fahrzeug bearbeiten', fr: 'Modifier le véhicule', ru: 'Изменить машину' },
   'car.addPartTitle':  { en: 'Add part', es: 'Añadir recambio', zh: '添加配件', de: 'Ersatzteil hinzufügen', fr: 'Ajouter une pièce', ru: 'Добавить запчасть' },
+  'part.editTitle':   { en: 'Edit part', es: 'Editar recambio', zh: '编辑配件', de: 'Ersatzteil bearbeiten', fr: 'Modifier la pièce', ru: 'Изменить запчасть' },
   'car.lastChange':    { en: 'Last change (km)', es: 'Último cambio (km)', zh: '上次更换（公里）', de: 'Letzter Wechsel (km)', fr: 'Dernier changement (km)', ru: 'Прошлая замена (км)' },
   'car.lastChangeDate':{ en: 'Last change date', es: 'Fecha último cambio', zh: '上次更换日期', de: 'Datum letzter Wechsel', fr: 'Date du dernier changement', ru: 'Дата прошлой замены' },
   'car.nextChange':    { en: 'Next change (km)', es: 'Próximo cambio (km)', zh: '下次更换（公里）', de: 'Nächster Wechsel (km)', fr: 'Prochain changement (km)', ru: 'Следующая замена (км)' },
@@ -599,6 +601,7 @@ export const STRINGS = {
   'err.remNotFound':  { en: 'Reminder not found', es: 'Recordatorio no encontrado', zh: '未找到提醒', de: 'Erinnerung nicht gefunden', fr: 'Rappel introuvable', ru: 'Напоминание не найдено' },
   'err.itvNotFound':  { en: 'Test record not found', es: 'ITV no encontrada', zh: '未找到年检记录', de: 'HU-Eintrag nicht gefunden', fr: 'Contrôle introuvable', ru: 'Запись техосмотра не найдена' },
   'err.jobNotFound':   { en: 'Job not found', es: 'Trabajo no encontrado', zh: '未找到该项目', de: 'Arbeit nicht gefunden', fr: 'Travail introuvable', ru: 'Работа не найдена' },
+  'err.partNotFound':  { en: 'Part not found', es: 'Recambio no encontrado', zh: '未找到该配件', de: 'Ersatzteil nicht gefunden', fr: 'Pièce introuvable', ru: 'Запчасть не найдена' },
 
   // ══════════════════════════ INFORMES (PDF y Excel) ══════════════════════════
   'rep.generatedOn':   { en: 'Generated on {date}', es: 'Generado el {date}', zh: '生成于 {date}', de: 'Erstellt am {date}', fr: 'Généré le {date}', ru: 'Создано {date}' },
