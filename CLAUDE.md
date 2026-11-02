@@ -253,7 +253,7 @@ para sacarle una captura sin pasar por el acceso:
 /preview.html?screens=stats&hover=0.4&click=Statistics&probe=1
 ```
 
-- `screens=<nombre>` monta solo esa pantalla (`car`, `moto`,
+- `screens=<nombre>` monta solo esa pantalla (`garage`, `car`, `moto`,
   `stats`, `reminders`, `workshops`, `groups`, `expense`, `admin`,
   `mmode`). `moto` es la ficha de la MT-07: es donde se comprueba
   que un eje sin lados se ve bien.

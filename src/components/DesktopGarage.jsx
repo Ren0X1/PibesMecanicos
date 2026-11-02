@@ -8,7 +8,7 @@ import {
   getMaintenanceRecords, getVehicleTodos, getCarParts, getCustomJobs,
   getFuelLogs, getKmLogs, getItvRecords,
 } from '../lib/api.js'
-import { MAINT_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
+import { MAINT_TYPES, getMaintStatus, formatDate, getMaintenanceForVehicle, fuelLabel, transLabel, maintLabel, healthScore } from '../lib/constants.js'
 import { t, useLang, fmtNum, fmtMoney } from '../lib/i18n.js'
 import { Gauge, StatusBadge, Loader } from './ui.jsx'
 import SpendChart from './SpendChart.jsx'
@@ -52,19 +52,6 @@ function PanelHead({ children, right }) {
   )
 }
 
-/* Salud de 0 a 100, igual que en la lista de móvil. */
-function health(maint, currentKm) {
-  if (!maint || maint.length === 0) return { score: 100, ok: 0, warn: 0, overdue: 0 }
-  let ok = 0, warn = 0, overdue = 0
-  for (const r of maint) {
-    const s = getMaintStatus(r, currentKm)
-    if (s === 'ok') ok++
-    else if (s === 'warn') warn++
-    else overdue++
-  }
-  return { score: Math.round(((ok + warn * 0.5) / maint.length) * 100), ok, warn, overdue }
-}
-
 // ─── Raíl de vehículos ───────────────────────────────────────
 
 function Rail({ cars, meta, selectedId, onSelect, onAdd, width }) {
@@ -77,7 +64,7 @@ function Rail({ cars, meta, selectedId, onSelect, onAdd, width }) {
       <div style={{ overflowY: 'auto', flex: 1 }}>
         {cars.map(car => {
           const mt = meta[car.id] || { maint: [] }
-          const { score, overdue, warn } = health(mt.maint, car.current_km)
+          const { score, overdue, warn } = healthScore(mt.maint, car.current_km)
           const on = car.id === selectedId
           const gaugeColor = overdue > 0 ? theme.red : warn > 0 ? theme.yellow : theme.green
           return (
@@ -123,7 +110,7 @@ function CondensedCard({ car, data, onOpenFull, onEdit, wide, context, rows }) {
   const [tab, setTab] = useState('maint')
 
   const { maintenance, todos, parts, fuelLogs, kmLogs, itv, jobs = [] } = data
-  const stats = health(maintenance, car.current_km)
+  const stats = healthScore(maintenance, car.current_km)
   /* Los trabajos libres son gasto del vehículo como cualquier otro:
      si no se suman aquí, esta cifra y la de la pestaña Gastos dicen
      cosas distintas del mismo coche. */

@@ -17,9 +17,9 @@ import {
   MAINT_TYPES, FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, getMaintStatus, formatDate,
   getMaintenanceForVehicle, fuelLabel, transLabel,
   maintName, maintDefKm, maintDefMonths, hasSides, hasSideData, worstOf, worstSide,
-  SIDES, sideLabel, sideShort, nextFrom, byUrgency,
+  SIDES, sideLabel, sideShort, nextFrom, byUrgency, healthScore,
 } from '../lib/constants.js'
-import { Modal, Field, Loader, ResponsiveGrid2, DateInput, NumInput, useConfirm } from './ui.jsx'
+import { Modal, Field, Loader, ResponsiveGrid2, DateInput, NumInput, useConfirm, Gauge } from './ui.jsx'
 import { MaintIcon } from '../lib/maintIcons.jsx'
 import SwipeArea, { useEdgeBack } from './SwipeArea.jsx'
 import { t, useLang, fmtNum, fmtMoney } from '../lib/i18n.js'
@@ -41,34 +41,66 @@ function TabBar({ tabs, active, onChange, isMobile }) {
      de lado: antes eran tres filas de botones que empujaban la lista
      media pantalla hacia abajo. Desde la sexta pestaña, en ancho, se
      aprieta el botón en vez de cortar la palabra. */
-  const apretado = !isMobile && tabs.length > 5
+  /* En ordenador, las pestañas del garaje: versalita, sobre una
+     banda del fondo, la elegida en el acento y sobre la tarjeta, y
+     pegadas al panel de debajo, que hace de cuerpo. */
+  if (!isMobile) {
+    return (
+      <div style={{
+        display: 'flex', background: theme.bg, overflowX: 'auto', scrollbarWidth: 'none',
+        border: `1px solid ${theme.border}`, borderBottom: 'none',
+      }}>
+        {tabs.map(x => {
+          const on = active === x.id
+          return (
+            <button key={x.id} onClick={() => onChange(x.id)} aria-current={on ? 'page' : undefined} style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px',
+              background: on ? theme.card : 'transparent', border: 'none',
+              borderBottom: `2px solid ${on ? theme.accent : 'transparent'}`,
+              cursor: 'pointer',
+              ...css.lbl, color: on ? theme.accent : theme.muted,
+              whiteSpace: 'nowrap', transition: 'color .15s',
+            }}>
+              {x.icon} {x.label}
+              {x.badge && (
+                <span style={{
+                  background: theme.accent, color: theme.accentInk, fontSize: 10.5,
+                  padding: '0 4px', minWidth: 14, textAlign: 'center', letterSpacing: 0,
+                }}>{x.badge}</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
   return (
     <div style={{
       marginBottom: 16, display: 'flex', gap: 0,
       borderBottom: `1px solid ${theme.border}`,
-      ...(isMobile ? { overflowX: 'auto', scrollbarWidth: 'none' } : {}),
+      overflowX: 'auto', scrollbarWidth: 'none',
     }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} aria-current={active === t.id ? 'page' : undefined} style={{
-          display: 'flex', alignItems: 'center', gap: apretado ? 6 : 7,
-          flex: isMobile ? 'none' : 1, justifyContent: 'center',
+          display: 'flex', alignItems: 'center', gap: 7,
+          flex: 'none', justifyContent: 'center',
           background: 'transparent',
           color: active === t.id ? theme.white : theme.muted,
           border: 'none', borderBottom: `3px solid ${active === t.id ? theme.accent : 'transparent'}`,
           marginBottom: -1,
-          borderRadius: 0, padding: isMobile ? '12px 14px' : (apretado ? '11px 8px' : '11px 16px'), cursor: 'pointer',
+          borderRadius: 0, padding: '12px 14px', cursor: 'pointer',
           fontWeight: active === t.id ? 600 : 500,
-          fontSize: isMobile ? 14 : (apretado ? 13 : 13.5), fontFamily: 'inherit', transition: 'color .15s', position: 'relative',
+          fontSize: 14, fontFamily: 'inherit', transition: 'color .15s', position: 'relative',
           whiteSpace: 'nowrap', minWidth: 0,
         }}>
           {t.icon}
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</span>
           {t.badge && (
             <span style={{
-              background: theme.accent, color: '#000', borderRadius: 0,
+              background: theme.accent, color: theme.accentInk, borderRadius: 0,
               minWidth: 17, height: 17, padding: '0 5px',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 10, fontWeight: 800, flexShrink: 0,
+              fontSize: 10.5, fontWeight: 800, flexShrink: 0,
             }}>{t.badge}</span>
           )}
         </button>
@@ -427,23 +459,30 @@ function LeadStrip({ grupos, currentKm, vehicleType, mob }) {
     { id: 'ok', n: n.ok, color: theme.green, label: t('car.statOk') },
     { id: 'empty', n: n.empty, color: theme.border, dot: theme.rule, label: t('maint.notLogged') },
   ].filter(x => x.n > 0)
-  const celda = { padding: mob ? '14px 16px' : '18px 22px', minWidth: 0 }
+  /* En ordenador es la franja de indicadores del garaje: sin
+     tarjeta, un filete fuerte arriba, celdas separadas por filetes y
+     cifras de 19 px. «Lo que toca» va algo mayor porque es la
+     respuesta de la pantalla. En el móvil sigue siendo una tarjeta. */
+  const celda = { padding: mob ? '14px 16px' : '10px 12px', minWidth: 0 }
   const separa = mob ? { borderTop: `1px solid ${theme.border}` } : { borderLeft: `1px solid ${theme.border}` }
-  const cifra = { ...css.num, fontSize: mob ? 24 : 30, fontWeight: 600, lineHeight: 1.1, marginTop: 6 }
+  const cifra = { ...css.num, fontSize: mob ? 24 : 19, fontWeight: 600, lineHeight: 1.1, marginTop: mob ? 6 : 5 }
+  const respuesta = { ...cifra, fontSize: mob ? 24 : 22 }
   return (
     <div style={{
-      display: 'grid', gridTemplateColumns: mob ? '1fr' : 'minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.3fr)',
-      background: theme.card, border: `1px solid ${theme.border}`, marginBottom: mob ? 16 : 22,
+      display: 'grid', gridTemplateColumns: mob ? '1fr' : 'minmax(0,1.6fr) minmax(0,0.8fr) minmax(0,1.4fr)',
+      ...(mob
+        ? { background: theme.card, border: `1px solid ${theme.border}`, marginBottom: 16 }
+        : { borderTop: `1px solid ${theme.rule}`, borderBottom: `1px solid ${theme.border}`, marginBottom: 13 }),
     }}>
       <div style={celda}>
         <div style={css.lbl}>{t('car.nextUp')}</div>
         {q ? (
           <>
-            <div style={{ ...cifra, color: q.color }}>
+            <div style={{ ...respuesta, color: q.color }}>
               {q.main}
-              {q.sub && <span style={{ fontSize: 14, color: theme.muted, fontWeight: 500, marginLeft: 8 }}>{q.sub}</span>}
+              {q.sub && <span style={{ fontSize: mob ? 14 : 12.5, color: theme.muted, fontWeight: 500, marginLeft: 8 }}>{q.sub}</span>}
             </div>
-            <div style={{ fontSize: 14, color: theme.text, marginTop: 6 }}>
+            <div style={{ fontSize: mob ? 14 : 13, color: theme.text, marginTop: mob ? 6 : 4 }}>
               {aLaPar.map(x => maintName(x.mt, vehicleType)).join(' · ')}
             </div>
           </>
@@ -460,7 +499,7 @@ function LeadStrip({ grupos, currentKm, vehicleType, mob }) {
       )}
       <div style={{ ...celda, ...separa }}>
         <div style={css.lbl}>{t('car.healthOf', { n: total })}</div>
-        <div style={{ display: 'flex', gap: 2, height: 10, margin: '12px 0 10px' }}>
+        <div style={{ display: 'flex', gap: 2, height: mob ? 10 : 8, margin: mob ? '12px 0 10px' : '9px 0 8px' }}>
           {tramos.map(x => <div key={x.id} style={{ flex: x.n, background: x.color }} />)}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 12.5, color: theme.muted }}>
@@ -1217,90 +1256,130 @@ export default function CarDetail({ car: initialCar, onBack, onCarUpdated, onToa
 
   const tabIndex = Math.max(0, detailTabs.findIndex(t => t.id === activeTab))
 
+  /* El número del anillo: el mismo cálculo que el garaje. */
+  const salud = healthScore(maintenance, car.current_km)
+
+  const acciones = (
+  <div style={{ display: 'flex', gap: 8, alignSelf: mob ? 'stretch' : 'flex-start' }}>
+    <button onClick={() => setShowKmModal(true)} style={{ ...css.btn(), flex: mob ? 1 : 'none', justifyContent: 'center' }}>
+      <TrendingUp size={14} /> {mob ? t('car.tabKmShort') : t('car.logKm')}
+    </button>
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setShowExportMenu(!showExportMenu)}
+        style={{ ...css.btnOutline, color: theme.muted }} title={t('car.export')} aria-label={t('car.export')}>
+        <FileDown size={14} />
+      </button>
+      {showExportMenu && (
+        <>
+          <div onClick={() => setShowExportMenu(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
+          <div style={{
+            position: 'absolute', top: '100%', right: 0, marginTop: 6,
+            background: theme.card, border: `1px solid ${theme.border}`,
+            borderRadius: 0, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            zIndex: 51, minWidth: 180, overflow: 'hidden',
+          }}>
+            <button onClick={() => {
+              setShowExportMenu(false)
+              exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords, todos, jobs })
+            }} style={{
+              width: '100%', background: 'transparent', border: 'none',
+              padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+              color: theme.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
+              textAlign: 'left',
+            }}>
+              <FileText size={16} color={theme.red} />
+              <div>
+                <div style={{ fontWeight: 600 }}>{t('car.exportPdf')}</div>
+                <div style={css.lbl}>{t('car.fullReport')}</div>
+              </div>
+            </button>
+            <div style={{ height: 1, background: theme.border }} />
+            <button onClick={async () => {
+              setShowExportMenu(false)
+              try {
+                await exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords, todos, jobs })
+              } catch (err) {
+                onToast(t('car.exportXlsErr') + err.message, 'error')
+              }
+            }} style={{
+              width: '100%', background: 'transparent', border: 'none',
+              padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+              color: theme.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
+              textAlign: 'left',
+            }}>
+              <FileSpreadsheet size={16} color={theme.green} />
+              <div>
+                <div style={{ fontWeight: 600 }}>{t('car.exportExcel')}</div>
+                <div style={css.lbl}>{t('car.sheetData')}</div>
+              </div>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+    <button onClick={() => setShowEditCar(true)} style={css.btnOutline} aria-label={t('car.editVehicle')}>
+      <Edit2 size={14} />{!mob && ` ${t('common.edit')}`}
+    </button>
+  </div>
+  )
+
   return (
     <div style={{ paddingTop: mob ? 16 : 24, paddingBottom: 40 }}>
-      <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 16, padding: mob ? '6px 12px' : '8px 16px' }}><ChevronLeft size={14} /> {t('common.back')}</button>
+      {/* En el móvil, la cabecera de siempre. En ordenador habla como
+          la pantalla principal del garaje, que es de donde se viene:
+          el anillo de salud, el titular a 23 px y una sola línea de
+          datos en versalita, sin tarjeta alrededor. Antes la ficha
+          llevaba otra cabecera, otras cifras y otras pestañas, y al
+          pulsar «Ficha completa» parecía otra aplicación. */}
+      {mob ? (
+        <>
+          <button onClick={onBack} style={{ ...css.btnOutline, marginBottom: 16, padding: mob ? '6px 12px' : '8px 16px' }}><ChevronLeft size={14} /> {t('common.back')}</button>
 
-      {/* Header */}
-      <div style={{ ...css.card, padding: mob ? 16 : 22, marginBottom: 14 }}>
-        <div style={{ display: 'flex', flexDirection: mob ? 'column' : 'row', justifyContent: 'space-between', gap: mob ? 12 : 0 }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-              <h2 style={{ ...css.h1, fontSize: mob ? 22 : 28 }}>{car.brand} {car.model}</h2>
-              <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
-            </div>
-            <div style={{ display: 'flex', gap: mob ? 10 : 16, marginTop: 6, flexWrap: 'wrap', fontSize: mob ? 12 : 13 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}>
-                {car.vehicle_type === 'moto' ? <Bike size={13} /> : <Car size={13} />} {VEHICLE_TYPES.find(v => v.value === (car.vehicle_type || 'coche'))?.label}
-              </span>
-              {mob && <span style={{ ...css.num, display: 'flex', alignItems: 'center', color: theme.white }}>{fmtNum(car.current_km)} {t('common.km')}</span>}
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Calendar size={13} /> {car.year}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Settings size={13} /> {transLabel(car.transmission)}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Fuel size={13} /> {fuelLabel(car.fuel)}</span>
+          {/* Header */}
+          <div style={{ ...css.card, padding: mob ? 16 : 22, marginBottom: 14 }}>
+            <div style={{ display: 'flex', flexDirection: mob ? 'column' : 'row', justifyContent: 'space-between', gap: mob ? 12 : 0 }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                  <h2 style={{ ...css.h1, fontSize: mob ? 22 : 28 }}>{car.brand} {car.model}</h2>
+                  <span style={css.badge(theme.accentSoft, theme.accent)}>{car.plate}</span>
+                </div>
+                <div style={{ display: 'flex', gap: mob ? 10 : 16, marginTop: 6, flexWrap: 'wrap', fontSize: mob ? 12 : 13 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}>
+                    {car.vehicle_type === 'moto' ? <Bike size={13} /> : <Car size={13} />} {VEHICLE_TYPES.find(v => v.value === (car.vehicle_type || 'coche'))?.label}
+                  </span>
+                  {mob && <span style={{ ...css.num, display: 'flex', alignItems: 'center', color: theme.white }}>{fmtNum(car.current_km)} {t('common.km')}</span>}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Calendar size={13} /> {car.year}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Settings size={13} /> {transLabel(car.transmission)}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: theme.muted }}><Fuel size={13} /> {fuelLabel(car.fuel)}</span>
+                </div>
+              </div>
+              {acciones}
+
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignSelf: mob ? 'stretch' : 'flex-start' }}>
-            <button onClick={() => setShowKmModal(true)} style={{ ...css.btn(), flex: mob ? 1 : 'none', justifyContent: 'center' }}>
-              <TrendingUp size={14} /> {mob ? t('car.tabKmShort') : t('car.logKm')}
-            </button>
-            <div style={{ position: 'relative' }}>
-              <button onClick={() => setShowExportMenu(!showExportMenu)}
-                style={{ ...css.btnOutline, color: theme.muted }} title={t('car.export')} aria-label={t('car.export')}>
-                <FileDown size={14} />
+        </>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 13 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13, minWidth: 0 }}>
+            <Gauge value={salud.score}
+              color={salud.overdue > 0 ? theme.red : salud.warn > 0 ? theme.yellow : theme.green} size={40} />
+            <div style={{ minWidth: 0 }}>
+              <button onClick={onBack} style={{
+                ...css.lbl, background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: 3, marginBottom: 5,
+              }}>
+                <ChevronLeft size={12} /> {t('common.back')}
               </button>
-              {showExportMenu && (
-                <>
-                  <div onClick={() => setShowExportMenu(false)}
-                    style={{ position: 'fixed', inset: 0, zIndex: 50 }} />
-                  <div style={{
-                    position: 'absolute', top: '100%', right: 0, marginTop: 6,
-                    background: theme.card, border: `1px solid ${theme.border}`,
-                    borderRadius: 0, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                    zIndex: 51, minWidth: 180, overflow: 'hidden',
-                  }}>
-                    <button onClick={() => {
-                      setShowExportMenu(false)
-                      exportCarPdf({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords, todos, jobs })
-                    }} style={{
-                      width: '100%', background: 'transparent', border: 'none',
-                      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
-                      color: theme.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
-                      textAlign: 'left',
-                    }}>
-                      <FileText size={16} color={theme.red} />
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{t('car.exportPdf')}</div>
-                        <div style={css.lbl}>{t('car.fullReport')}</div>
-                      </div>
-                    </button>
-                    <div style={{ height: 1, background: theme.border }} />
-                    <button onClick={async () => {
-                      setShowExportMenu(false)
-                      try {
-                        await exportCarExcel({ car, maintenance, kmLogs, fuelLogs, parts, itvRecords, todos, jobs })
-                      } catch (err) {
-                        onToast(t('car.exportXlsErr') + err.message, 'error')
-                      }
-                    }} style={{
-                      width: '100%', background: 'transparent', border: 'none',
-                      padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
-                      color: theme.text, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13,
-                      textAlign: 'left',
-                    }}>
-                      <FileSpreadsheet size={16} color={theme.green} />
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{t('car.exportExcel')}</div>
-                        <div style={css.lbl}>{t('car.sheetData')}</div>
-                      </div>
-                    </button>
-                  </div>
-                </>
-              )}
+              <h1 style={{ ...css.h1, fontSize: 23 }}>{car.brand} {car.model}</h1>
+              <div style={{ ...css.lbl, marginTop: 6 }}>
+                {car.plate} · {VEHICLE_TYPES.find(v => v.value === (car.vehicle_type || 'coche'))?.label} · {car.year} · {fuelLabel(car.fuel)} · {transLabel(car.transmission)}
+              </div>
             </div>
-            <button onClick={() => setShowEditCar(true)} style={css.btnOutline} aria-label={t('car.editVehicle')}><Edit2 size={14} /></button>
           </div>
+          {acciones}
         </div>
-      </div>
+      )}
 
       <LeadStrip grupos={grupos} currentKm={car.current_km} vehicleType={car.vehicle_type} mob={mob} />
 

@@ -213,6 +213,23 @@ export function getMaintStatus(maint, currentKm) {
   return 'ok'
 }
 
+/* Salud del vehículo de 0 a 100: cada mantenimiento al día suma
+   entero, cada uno próximo suma medio y cada vencido no suma. Es el
+   número del anillo, y sale de aquí para que el raíl del garaje, la
+   ficha recortada y la ficha completa marquen siempre lo mismo
+   (estaba copiada en dos sitios). */
+export function healthScore(maint, currentKm) {
+  if (!maint || maint.length === 0) return { score: 100, ok: 0, warn: 0, overdue: 0 }
+  let ok = 0, warn = 0, overdue = 0
+  for (const r of maint) {
+    const s = getMaintStatus(r, currentKm)
+    if (s === 'ok') ok++
+    else if (s === 'warn') warn++
+    else overdue++
+  }
+  return { score: Math.round(((ok + warn * 0.5) / maint.length) * 100), ok, warn, overdue }
+}
+
 /* ─── Cuánto queda ───────────────────────────────────────────
    Lo que la ficha enseña en vez del próximo a secas: los km que
    faltan (o los que se ha pasado), los días, y qué parte de la vida

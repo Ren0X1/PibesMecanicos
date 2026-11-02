@@ -3,7 +3,7 @@ import { Car, Plus, Trash2, Save } from 'lucide-react'
 import { theme, css, FONT } from '../lib/theme.js'
 import { useIsMobile } from '../lib/useIsMobile.js'
 import { getCars, createCar, deleteCar, getMaintenanceRecords, getCarParts, getItvRecords } from '../lib/api.js'
-import { FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, MAINT_TYPES, getMaintStatus, fuelLabel, transLabel, maintLabel } from '../lib/constants.js'
+import { FUEL_TYPES, TRANS_TYPES, VEHICLE_TYPES, MAINT_TYPES, getMaintStatus, fuelLabel, transLabel, maintLabel, healthScore } from '../lib/constants.js'
 import { Modal, Field, Loader, ResponsiveGrid2, NumInput, SectionHead, Gauge, useConfirm } from './ui.jsx'
 import { useMediaQuery } from '../lib/useTouch.js'
 import DesktopGarage from './DesktopGarage.jsx'
@@ -71,24 +71,10 @@ function CarFormModal({ open, onClose, onSave }) {
   )
 }
 
-/* Salud del vehículo de 0 a 100: cada mantenimiento al día suma
-   entero, cada uno próximo suma medio y cada vencido no suma. */
-function health(maint, currentKm) {
-  if (!maint || maint.length === 0) return { score: 100, overdue: 0, warn: 0 }
-  let ok = 0, warn = 0, overdue = 0
-  for (const r of maint) {
-    const s = getMaintStatus(r, currentKm)
-    if (s === 'ok') ok++
-    else if (s === 'warn') warn++
-    else overdue++
-  }
-  return { score: Math.round(((ok + warn * 0.5) / maint.length) * 100), overdue, warn }
-}
-
 function VehicleCard({ car, meta, onOpen, onDelete, mob }) {
   useLang()
   const mt = meta || { maint: [], partsCount: 0, itv: null }
-  const { score, overdue, warn } = health(mt.maint, car.current_km)
+  const { score, overdue, warn } = healthScore(mt.maint, car.current_km)
   const gaugeColor = overdue > 0 ? theme.red : warn > 0 ? theme.yellow : theme.green
 
   let itvBadge = null
@@ -278,7 +264,7 @@ export default function Dashboard({ user, onToast }) {
   }
 
   const needAttention = cars.filter(c => {
-    const { overdue, warn } = health((carMeta[c.id] || {}).maint, c.current_km)
+    const { overdue, warn } = healthScore((carMeta[c.id] || {}).maint, c.current_km)
     return overdue > 0 || warn > 0
   }).length
 

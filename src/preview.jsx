@@ -9,6 +9,7 @@ import UserStats from './components/UserStats.jsx'
 import ExpenseTab from './components/ExpenseTab.jsx'
 import AdminPanel from './components/AdminPanel.jsx'
 import CarDetail from './components/CarDetail.jsx'
+import DesktopGarage from './components/DesktopGarage.jsx'
 import MaintenanceWall from './components/MaintenanceWall.jsx'
 import Reminders from './components/Reminders.jsx'
 import Workshops from './components/Workshops.jsx'
@@ -254,8 +255,13 @@ function Screens() {
     ]).then(async ([cars, user]) => {
       const car = cars[0]
       const moto = cars.find(c => c.vehicle_type === 'moto') || cars[1] || car
+      /* Lo mismo que carga el panel para el raíl del garaje. */
+      const meta = {}
+      for (const c of cars) meta[c.id] = { maint: await demoStore.getMaintenanceRecords(c.id) }
       setDatos({
         user,
+        cars,
+        meta,
         car,
         moto,
         maintenance: await demoStore.getMaintenanceRecords(car.id),
@@ -278,6 +284,19 @@ function Screens() {
 
   return (
     <div style={{ padding: pad }}>
+      {/* La pantalla principal de un coche en ordenador: con ella
+          se compara la ficha completa, que tienen que hablar igual. */}
+      {show('garage') && (
+        <>
+          <h2 style={{ ...css.h2, fontSize: 16, margin: '10px 0' }}>Garaje</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 760 }}>
+            <DesktopGarage cars={datos.cars} meta={datos.meta}
+              wide={window.innerWidth >= 1800} context={window.innerWidth >= 1400} tall
+              onAdd={() => {}} onOpenFull={() => {}} onEdit={() => {}} onToast={() => {}} />
+          </div>
+        </>
+      )}
+
       {show('car') && (
         <>
           <h2 style={{ ...css.h2, fontSize: 16, margin: '10px 0' }}>Ficha completa</h2>
