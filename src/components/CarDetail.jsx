@@ -171,7 +171,7 @@ function PartChip({ part, onClick }) {
    Un próximo a cero no es un vencido: es una pieza sin intervalo. */
 function quedaDe(record, status, progress) {
   const fecha = record.next_date ? formatDate(record.next_date) : null
-  const color = status === 'overdue' ? theme.red : status === 'warn' ? theme.yellow : theme.white
+  const color = status === 'overdue' ? theme.red : status === 'warn' ? theme.yellow : theme.green
   const { kmLeft, daysLeft } = progress || {}
   if (kmLeft != null) {
     if (kmLeft <= 0) {
@@ -190,10 +190,10 @@ function quedaDe(record, status, progress) {
 }
 
 const colorBarra = (status) =>
-  status === 'overdue' ? theme.red : status === 'warn' ? theme.yellow : theme.mutedLight
+  status === 'overdue' ? theme.red : status === 'warn' ? theme.yellow : theme.green
 
-/* La vida gastada, en un trazo fino. Solo lleva color cuando hay
-   que hacer algo; lo que está al día se queda en gris. */
+/* La vida gastada, en un trazo fino, del color de su estado: verde
+   al día, ámbar cerca del límite y rojo pasada. */
 function VidaBar({ fraction, status, width = 110 }) {
   if (fraction == null) return <span style={{ display: 'block', textAlign: 'right', color: theme.mutedLight }}>—</span>
   return (
@@ -386,7 +386,7 @@ function MaintListMobile({ grupos, vehicleType, onEdit }) {
         borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left',
         fontFamily: 'inherit', color: theme.text,
       }}>
-        <span style={{ width: 3, alignSelf: 'stretch', background: status === 'ok' ? 'transparent' : colorBarra(status), flexShrink: 0 }} />
+        <span style={{ width: 3, alignSelf: 'stretch', background: colorBarra(status), flexShrink: 0 }} />
         <MaintIcon id={mt.id} color={theme.muted} size={16} />
         <span style={{ flex: 1, minWidth: 0 }}>
           <span style={{ display: 'block', color: theme.white, fontWeight: 600, fontSize: 14.5 }}>{maintName(mt, vehicleType)}</span>
