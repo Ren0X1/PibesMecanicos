@@ -39,7 +39,7 @@ Get-NetTCPConnection -State Listen | Where-Object { $_.LocalPort -ge 5170 -and $
 src/
   lib/
     theme.js        el sistema de diseño entero (colores, tipos, css)
-    strings.js      683 claves × 6 idiomas
+    strings.js      682 claves × 6 idiomas
     i18n.js         t(), fmtNum, fmtMoney, fmtDate, fmtMonth
     api.js          FACHADA: decide entre Supabase y la demo
     supabase.js     la de verdad
@@ -132,7 +132,8 @@ Un reparto no es una serie: va en una barra partida hecha con
 
 La lista de mantenimientos no sigue el orden de `MAINT_TYPES`: va
 en grupos —vencido, próximo, al día— y lo que nunca se ha apuntado
-se recoge al final en fichas de «+». Dentro de cada grupo lo ordena
+va al final, una fila debajo de otra con «Sin datos» (se probó a
+recogerlo en fichas de «+» y con veinte vacías no se leía). Dentro de cada grupo lo ordena
 `byUrgency()`: si las dos piezas se miden en km, va antes la que
 menos km tiene por delante; si una se mide solo en meses, manda la
 vida gastada (`maintProgress()`). Arriba, «Lo que toca» es la

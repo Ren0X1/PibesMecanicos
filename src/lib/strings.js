@@ -476,7 +476,6 @@ export const STRINGS = {
   'maint.dateOver':    { en: 'since {date}', es: 'desde el {date}', zh: '自 {date} 起', de: 'seit {date}', fr: 'depuis le {date}', ru: 'с {date}' },
   'maint.noInterval':  { en: 'no interval', es: 'sin intervalo', zh: '无周期', de: 'kein Intervall', fr: 'sans intervalle', ru: 'без интервала' },
   'maint.notLogged':   { en: 'Not logged', es: 'Sin apuntar', zh: '未记录', de: 'Nicht eingetragen', fr: 'Non renseigné', ru: 'Не записано' },
-  'maint.tapToLog':    { en: 'tap one to log it for the first time', es: 'toca una para apuntarla la primera vez', zh: '点击一项进行首次记录', de: 'tippen, um es zum ersten Mal einzutragen', fr: 'touchez-en un pour le noter une première fois', ru: 'нажмите, чтобы записать впервые' },
   'maint.deleteConfirm': { en: 'Delete everything logged for {name}?', es: '¿Borrar todo lo apuntado de {name}?', zh: '删除 {name} 的所有记录？', de: 'Alle Einträge zu {name} löschen?', fr: 'Supprimer tout ce qui est noté pour {name} ?', ru: 'Удалить все записи для «{name}»?' },
   // ══════════════════════════ AÑADIDOS DE PANTALLA ══════════════════════════
   'common.unknown':  { en: 'unknown', es: 'desconocido', zh: '未知', de: 'unbekannt', fr: 'inconnu', ru: 'неизвестно' },

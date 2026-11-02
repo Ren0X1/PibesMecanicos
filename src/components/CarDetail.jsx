@@ -242,28 +242,11 @@ function GrupoTitulo({ label, n, color, extra, mob }) {
   )
 }
 
-/* Las piezas que nunca se han apuntado: una ficha por pieza, y un
-   toque abre su formulario. Antes era una fila entera de «sin
-   datos» por cada una. */
-function Vacios({ items, vehicleType, onAdd, mob }) {
-  if (!items.length) return null
-  return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: mob ? '4px 16px 16px' : '4px 20px 20px' }}>
-      {items.map(mt => (
-        <button key={mt.id} type="button" onClick={() => onAdd(mt.id)} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          background: 'transparent', color: theme.text, cursor: 'pointer',
-          border: `1px dashed ${theme.rule}`, padding: mob ? '9px 11px' : '6px 10px',
-          fontFamily: 'inherit', fontSize: 13, transition: 'border-color .15s',
-        }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = theme.accent }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = theme.rule }}>
-          <Plus size={13} color={theme.accent} /> {maintName(mt, vehicleType)}
-        </button>
-      ))}
-    </div>
-  )
-}
+/* Las piezas que nunca se han apuntado van al final, una debajo de
+   otra, como filas normales con «Sin datos»: un toque y se apunta.
+   Se probó a recogerlas en un bloque de fichas de «+», y con veinte
+   piezas vacías era una nube de botones que no se leía. */
+const SIN_DATOS = () => <span style={{ ...css.lbl }}>{t('common.noData')}</span>
 
 /* ── Escritorio: una tabla, con los grupos como filas de título ── */
 function MaintTable({ grupos, vehicleType, parts, onEdit, onOpenPart }) {
@@ -329,6 +312,31 @@ function MaintTable({ grupos, vehicleType, parts, onEdit, onOpenPart }) {
       </tr>
     )
   }
+  /* La primera vacía lleva el filete fuerte encima: separa lo que
+     tiene datos de lo que no, sin otro título. */
+  const filaVacia = (mt, i) => (
+    <tr key={mt.id} style={{ cursor: 'pointer' }}
+      onClick={() => onEdit(mt.id)}
+      onMouseEnter={e => { e.currentTarget.style.background = theme.cardHover; lapiz(e.currentTarget, 1) }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; lapiz(e.currentTarget, 0.35) }}>
+      <td style={{ ...css.td, paddingLeft: 20, fontWeight: 600, color: theme.text, ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}) }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <MaintIcon id={mt.id} color={theme.mutedLight} />
+          {maintName(mt, vehicleType)}
+        </span>
+      </td>
+      <td style={{ ...css.td, textAlign: 'right', ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}) }}>{SIN_DATOS()}</td>
+      {[0, 1, 2].map(k => (
+        <td key={k} style={{ ...css.td, textAlign: 'right', color: theme.mutedLight, ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}) }}>—</td>
+      ))}
+      <td style={{ ...css.td, width: 40, textAlign: 'center', ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}) }}>
+        <span data-lapiz style={{ opacity: 0.35, color: theme.muted, transition: 'opacity .15s', display: 'inline-flex' }}
+          aria-label={t('common.edit')}>
+          <Edit2 size={14} />
+        </span>
+      </td>
+    </tr>
+  )
   const titulo = (g, n) => (
     <tr key={`g-${g.id}`}>
       <td colSpan={6} style={{ padding: 0 }}>
@@ -354,16 +362,10 @@ function MaintTable({ grupos, vehicleType, parts, onEdit, onOpenPart }) {
             {GRUPOS.flatMap(g => grupos[g.id].length
               ? [titulo(g, grupos[g.id].length), ...grupos[g.id].map(fila)]
               : [])}
+            {grupos.empty.map(filaVacia)}
           </tbody>
         </table>
       </div>
-      {grupos.empty.length > 0 && (
-        <>
-          <GrupoTitulo label={t('maint.notLogged')} n={grupos.empty.length} color={theme.rule}
-            extra={t('maint.tapToLog')} />
-          <Vacios items={grupos.empty} vehicleType={vehicleType} onAdd={onEdit} />
-        </>
-      )}
       {total === 0 && <p style={{ ...css.lbl, padding: 20 }}>{t('common.noData')}</p>}
     </div>
   )
@@ -374,7 +376,7 @@ function MaintListMobile({ grupos, vehicleType, onEdit }) {
   /* Si no hay nada vencido ni próximo, lo que está al día arranca
      abierto: una pantalla con dos grupos plegados no dice nada. */
   const nadaUrgente = !grupos.overdue.length && !grupos.warn.length
-  const [abiertos, setAbiertos] = useState({ ok: nadaUrgente, empty: false })
+  const [abiertos, setAbiertos] = useState({ ok: nadaUrgente })
   const alternar = id => setAbiertos(a => ({ ...a, [id]: !a[id] }))
 
   const fila = ({ mt, record, status, progress }) => {
@@ -401,6 +403,20 @@ function MaintListMobile({ grupos, vehicleType, onEdit }) {
       </button>
     )
   }
+
+  const filaVacia = (mt, i) => (
+    <button key={mt.id} type="button" onClick={() => onEdit(mt.id)} style={{
+      display: 'flex', alignItems: 'center', gap: 12, width: '100%', minHeight: 52,
+      padding: '10px 16px 10px 15px', background: 'transparent', border: 'none',
+      borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left',
+      ...(i === 0 ? { borderTop: `1px solid ${theme.rule}` } : {}),
+      fontFamily: 'inherit', color: theme.text,
+    }}>
+      <MaintIcon id={mt.id} color={theme.mutedLight} size={16} />
+      <span style={{ flex: 1, minWidth: 0, fontWeight: 600, fontSize: 14.5 }}>{maintName(mt, vehicleType)}</span>
+      {SIN_DATOS()}
+    </button>
+  )
 
   const plegable = (id, label, color, n, contenido) => (
     <div key={id}>
@@ -431,8 +447,7 @@ function MaintListMobile({ grupos, vehicleType, onEdit }) {
         )
       })}
       {grupos.ok.length > 0 && plegable('ok', t('car.statOk'), theme.green, grupos.ok.length, grupos.ok.map(fila))}
-      {grupos.empty.length > 0 && plegable('empty', t('maint.notLogged'), theme.rule, grupos.empty.length,
-        <div style={{ paddingTop: 12 }}><Vacios items={grupos.empty} vehicleType={vehicleType} onAdd={onEdit} mob /></div>)}
+      {grupos.empty.map(filaVacia)}
     </div>
   )
 }
