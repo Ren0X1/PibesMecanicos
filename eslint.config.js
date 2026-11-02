@@ -1,6 +1,5 @@
 import js from '@eslint/js'
 import globals from 'globals'
-import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 
 /* ─────────────────────────────────────────────────────────────
@@ -17,6 +16,11 @@ import reactHooks from 'eslint-plugin-react-hooks'
    · «Rendered more hooks than during the previous render», por un
      hook colocado después de un return temprano. Lo caza
      rules-of-hooks.
+
+   Ya no hace falta eslint-plugin-react: desde eslint 10 el propio
+   análisis de ámbito cuenta como usado un componente que solo
+   aparece en JSX, que era lo único que se le pedía
+   (react/jsx-uses-vars). Además el plugin no admite eslint 10.
 
    El resto se deja en aviso: el objetivo es que los errores sean
    errores de verdad, no una lista de mil quejas de estilo que se
@@ -36,13 +40,10 @@ export default [
       globals: { ...globals.browser, ...globals.es2021 },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
-    settings: { react: { version: 'detect' } },
-    plugins: { react, 'react-hooks': reactHooks },
+    plugins: { 'react-hooks': reactHooks },
     rules: {
       // ── lo que rompe la aplicación ──
       'no-undef': 'error',
-      'react/jsx-uses-vars': 'error',       // sin esto, los componentes usados en JSX parecen no usados
-      'react/jsx-uses-react': 'off',        // con el runtime nuevo no hace falta importar React
       'react-hooks/rules-of-hooks': 'error',
 
       // ── avisos útiles, no bloqueantes ──
@@ -53,6 +54,13 @@ export default [
       }],
       'no-empty': ['warn', { allowEmptyCatch: true }],
     },
+  },
+
+  /* La configuración de Vite corre en Node, no en el navegador: ahí
+     sí existe __dirname (Vite se lo da al compilarla). */
+  {
+    files: ['vite.config.js', 'vitest.config.js', 'eslint.config.js'],
+    languageOptions: { globals: { ...globals.node } },
   },
 
   {
